@@ -1,32 +1,40 @@
-# Module Catalog
+# FinCore County Module Catalog
 
-| # | Module | Authoritative ownership |
+The platform is a modular monolith. Each row identifies one authoritative domain. Cross-module use is by stable ID, application contract or versioned event; a consumer does not write the producer's records.
+
+| # | Module | Authoritative ownership and boundary |
 |---|---|---|
-| 01 | System Foundation and Configuration | Own application configuration, API versioning, global settings, reference number generation, financial year configuration, system parameters, logging infrastructure, error handling, shared utilities, and health monitoring |
-| 02 | Identity and Access Management | Own authentication, user and account lifecycle, password management, MFA, roles, permissions, organizational access scopes, user assignments, sessions, suspension, and access history |
-| 03 | County Organization Management | Own configurable county structures: departments, directorates, sub-counties, wards, cost centres, programmes, projects, hierarchy, and reporting structures |
-| 04 | Workflow and Approval Engine | Own configurable workflows, approval chains and limits, delegation, rejection/return, escalation, notifications integration, workflow history, and segregation-of-duties enforcement |
-| 05 | Financial Master Data Management | Own chart of accounts, funds, funding sources, economic classifications, dimensions, account combinations, accounting rules, financial periods, and financial-year definitions |
-| 06 | Budget Planning and Preparation | Own budget calendars, departmental estimates/submissions, ceilings, recurrent and development budgets, programme-based budgeting, consolidation, review, approval, and approved versions |
-| 07 | Budget Execution and Control | Own allocations, releases, availability checks, commitments, encumbrances, liquidation, adjustments, virements, supplementary budgets, and utilization reporting |
-| 08 | Supplier Management | Own supplier registration/profile/classification/verification/documents/status/performance and transaction-history projections; protect restricted bank details |
-| 09 | Procurement Management | Own annual procurement plans, requisitions, procurement methods, tenders, quotations, evaluations, approvals, purchase orders, awards and procurement reporting; define e-GP boundary |
-| 10 | Contract Management | Own contract registration/amendments, milestones, deliverables, contractor performance, payment schedules, expiry notifications and closure |
-| 11 | Inventory and Stores Management | Own inventory categories/items, warehouses/stores, goods received notes, issues, transfers, adjustments, stocktakes, reorder levels and valuation |
-| 12 | Expenditure Management and Accounts Payable | Own supplier invoices, validation, three-way matching, verification, payables, payment vouchers, approvals, supplier balances, bills, aging and credit notes |
-| 13 | General Ledger and Accounting | Own double-entry journals, automated journal generation, journal approval/posting, trial balance, general ledger, reconciliations, adjustments, reversals, period/year close and statements |
-| 14 | Treasury and Cash Management | Own bank account registry, cashbook, cash-flow management, payment batches, execution tracking, statement imports, reconciliation, cash position and treasury reports |
-| 15 | County Revenue Management | Own revenue streams/tariffs, assessments, invoices, receipts, payments, collection centres/officers, arrears, reconciliation and revenue reporting |
-| 16 | Fixed Asset Management | Own asset register/classification/tagging/acquisition/assignment/transfers/maintenance/depreciation/valuation/disposal |
-| 17 | Development Project Management | Own county development projects, project budgets, contractors, milestones, progress, certificates, expenditure views and performance reports |
-| 18 | Grants and Transfer Management | Own grant registration, conditional/unconditional grants, intergovernmental transfers, allocations, disbursements, utilization, compliance and reporting |
-| 19 | Payroll Integration | Own payroll imports, validation, control totals, deductions mapping, journal generation requests, reconciliation and payroll reporting; integration-first, not payroll replacement |
-| 20 | Debt and Liability Management | Own county debt records, loan agreements, repayment schedules, interest records, liability registers, obligations and debt reporting |
-| 21 | Audit and Compliance Management | Own internal audit plans/assignments/findings/evidence/recommendations/management responses/corrective actions/risk registers/compliance monitoring/reports |
-| 22 | Reporting and Business Intelligence | Own dashboards, budget/revenue/expenditure/procurement/cash-flow/financial/audit reports, custom report builder, scheduled reports and exports |
-| 23 | Document and Record Management | Own secure uploads, classification, versioning, access permissions, linking, evidence preservation, retention policies and secure downloads |
-| 24 | Notification and Communication | Own in-app/email notifications, approval/escalation/payment/budget alerts, announcements and preferences |
-| 25 | Integration and External System Gateway | Own banking/payment/e-GP/payroll/revenue/government-reporting adapters, webhooks, credentials, monitoring, retries, error handling and integration audit logs |
-| 26 | System Audit, Security and Monitoring | Own business/security event monitoring, login and failed-auth monitoring, privileged-action monitoring, suspicious-activity detection, application/backup/error monitoring and audit-log integrity controls |
+| 01 | System Foundation and Configuration | Environment-independent settings, global parameters, API conventions, numbering and health. Does not own financial year/period. |
+| 02 | Identity and Access Management | User identities, credentials, roles, permissions, scopes, sessions and access events. |
+| 03 | County Organization Management | County organizational hierarchy, effective-dated leadership, cost-centres, programmes and project identity. Module 17 owns project delivery. |
+| 04 | Workflow and Approval Engine | Workflow definitions, versioning, instances, assignments, decisions and delegation. Does not own submitted business transactions. |
+| 05 | Financial Master Data Management | Chart, funds, classifications, dimensions, account combinations, accounting rules, financial years, periods and calendar status. |
+| 06 | Budget Planning and Preparation | Budget call, ceilings, estimates, submissions, consolidation, review and approved budget versions. |
+| 07 | Budget Execution and Control | Approved-budget allocations/releases, reservations, commitments, encumbrances, liquidation, transfers and execution balances. |
+| 08 | Supplier Management | Supplier identity, due diligence, status, classifications, verified bank details and performance history. |
+| 09 | Procurement Management | Procurement plans, requisitions, sourcing, bids, evaluation, recommendation, award and purchase orders. |
+| 10 | Contract Management | Award-linked contracts, amendments, obligations, milestones, deliverables, performance and closure. |
+| 11 | Inventory and Stores Management | Stores, item catalogue, receipts, inspections, stock movements, counts, valuation and exceptions. |
+| 12 | Expenditure and Accounts Payable | Supplier invoices, matching, liabilities, credit notes, disputes and approved payment vouchers. Treasury executes payment. |
+| 13 | General Ledger and Accounting | Journal records, validation, posting, ledger, reconciliation, adjustment/reversal, trial balance and close. |
+| 14 | Treasury and Cash Management | Bank registry, cashbook, payment batch/execution outcome, statement import and bank reconciliation. |
+| 15 | County Revenue Management | Revenue sources/tariffs, assessments, billing, receipts, allocation, arrears, refunds and revenue reconciliation. |
+| 16 | Fixed Asset Management | Asset register, tagging, custody, maintenance, depreciation, impairment, verification and disposal lifecycle. |
+| 17 | Development Project Management | Project proposal/appraisal, baselined delivery, milestones, certificates, progress, variations and closure. Budget actuals remain 07/13. |
+| 18 | Grants and Transfer Management | Grant agreements, conditions, allocations, utilization/compliance and transfer tracking. Treasury owns cash execution. |
+| 19 | Payroll Integration | External payroll batch ingestion, validation, mapping, control totals, reconciliation and journal request; not a payroll engine. |
+| 20 | Debt and Liability Management | Facilities, agreements, principal/liability records, interest and repayment schedules. Treasury pays, ledger posts. |
+| 21 | Audit and Compliance Management | Audit plans/engagements, working evidence references, findings, responses and remediation closure. |
+| 22 | Reporting and Business Intelligence | Governed read models, definitions, schedules, exports and freshness/reconciliation indicators; read-only to sources. |
+| 23 | Document and Record Management | Private file metadata, versions, classification, links, holds, retention and disposition evidence. |
+| 24 | Notification and Communication | Notification templates/preferences, announcements and delivery attempts; never approval or transaction state. |
+| 25 | Integration and External System Gateway | External adapter configuration, inbound/outbound transport, retries and delivery monitoring; no domain transaction ownership. |
+| 26 | System Audit, Security and Monitoring | Canonical technical/security telemetry, monitoring incidents and integrity signals; module 21 owns audit engagements/findings. |
 
-Domain modules own their transaction records. Shared IAM, workflow, document, notification, gateway, monitoring and reporting capabilities do not become duplicate transaction ledgers. See each specification in ../modules/.
+## Ownership conflict resolutions
+
+- Module 05 is the sole owner of financial years, accounting periods, calendar status and period transition history. Module 01 may provide generic system settings and numbering but consumes calendar references from 05.
+- Module 03 owns project identity/classification. Module 17 owns proposal-to-delivery lifecycle. Budget modules own financial baselines/actual controls.
+- Module 12 owns invoice liability and payment voucher approval. Module 14 owns release/execution outcome and bank reconciliation. Module 13 owns posted journals.
+- Module 21 owns audit findings/remediation; module 26 owns system/security incidents and telemetry.
+- Module 04 owns approval decisions, not the business record. Module 24 owns delivery, not approval state.

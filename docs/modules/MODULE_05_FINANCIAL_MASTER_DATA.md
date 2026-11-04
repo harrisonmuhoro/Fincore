@@ -1,65 +1,69 @@
 # MODULE 05 — Financial Master Data Management
 
 ## 1. Purpose and scope
-Chart, funds, sources, dimensions, combinations, accounting rules, periods. This module owns accounts, funds, dimensions, combinations, periods, rules.. It does not own records of its dependencies or consumers.
+Own the authoritative chart of accounts, funds/funding sources, economic classifications, programme/sub-programme financial dimensions, cost-centre/account combinations, accounting rules, currency metadata, financial years, accounting periods, and financial calendar status. Every financial module references this versioned master data. Module 01 owns generic system settings and numbering only.
 
 ## 2. Functional requirements
-Chart, funds, sources, dimensions, combinations, accounting rules, periods. Operational functions are limited to this domain; reference records remain administered by their owning module.
+Maintain coded hierarchical account structures, fund/source classifications and dimension dictionaries; configure allowed account combinations; define KES and any later approved currency metadata; configure financial years and periods; activate/supersede effective-dated master-data versions; open/close/reopen periods through controlled actions; publish version/status references to consumers; report invalid or inactive references and calendar transitions.
 
 ## 3. Actors and responsibilities
-Finance master-data stewards maintain COA and dimensions; accountants validate posting combinations; authorized finance approvers activate versions; all financial modules consume active IDs.
+Finance master-data steward maintains draft COA and dimensions. Financial controller reviews combinations and calendar setup. Authorized independent finance authority activates master-data versions and approves period open/close/reopen. Accountants consume active references; system administrators operate the platform but do not approve finance data by default; auditors have read-only change history.
 
 ## 4. Permissions and access restrictions
-Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
+- finance.coa.view/edit; finance.fund.view/edit; finance.dimension.view/edit; finance.account_combination.validate/propose/activate.
+- finance.calendar.view; finance.financial_year.create/edit/activate; finance.accounting_period.create/open/close/reopen.
+- finance.accounting_rule.propose/approve/activate; finance.master_data.export; finance.master_data.audit.view.
+Scope changes to authorized finance master-data stewards. Separate proposer from activator. Period reopen is privileged, reasoned and independently approved; no generic administrator grant implies this authority.
 
 ## 5. Module-specific business rules
-Only valid active combinations; closed periods locked. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Codes are unique within their configured classification and effective period. Parent-child structures cannot cycle. Account combinations must reference active accounts, funds and required dimensions; invalid combinations cannot be activated or posted. Financial year dates cannot overlap for the same calendar. Periods must belong to exactly one year, have ordered non-overlapping dates and explicit open/closed/future status. Closing a period prevents new posting; reopening is a distinct audited approval, not a status edit. Calendar changes never silently re-date posted transactions. KES is default; multi-currency usage requires an approved policy. Do not invent accounting basis, chart coding, fiscal dates or approval thresholds.
 
 ## 6. Detailed business workflows
-Draft master-data version → validate codes/relationships/effective periods → independent approval → active version; used combinations/periods cannot be deleted and closed periods reject posting.
-Initiation, mandatory validation and approval gates are defined above. On failure, Invalid dimension combination blocks activation/posting; overlapping effective periods require correction; closed period cannot be reopened without privileged approved record.
+**COA/dimension activation:** steward drafts coded structure → validate uniqueness, hierarchy and references → controller reviews impact on existing combinations → independent authority activates a version with effective date → consumers receive version event. If used by posted journals, prior version is retired, not deleted.
+**Financial year and period setup:** calendar owner creates year dates → validates no overlap and period coverage/order → finance reviewer checks alignment to configured budget/accounting calendar → independent authority activates year/periods → status is future/open. Opening a period verifies prior-period prerequisites if configured. Close action checks pending posting/reconciliation checklist, requests independent approval, then marks closed and emits close event. Reopen requires explicit reason/evidence, authority and audit.
+Failures: overlap, missing period coverage, invalid dimensions, or unresolved prerequisite blocks activation/close. No partial calendar change is committed.
 
 ## 7. State transitions and lifecycle rules
-Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
+| Current state | Action | Next state | Authorized actor | Preconditions / side effects |
+|---|---|---|---|---|
+| Draft master version | Validate and submit | In review | Master-data steward | Codes, hierarchy and combinations validated; snapshot version recorded. |
+| In review | Approve activation | Active | Independent finance authority | No unresolved collision; effective date set; MasterDataVersionActivated emitted. |
+| Active version | Supersede | Superseded | Master-data authority | Replacement active; historical references remain readable. |
+| Future financial year | Activate | Current/active | Finance calendar approver | Dates/periods valid, non-overlapping; YearActivated emitted. |
+| Future/closed period | Open | Open | Period authority | Year active, prerequisites satisfied, action audited. |
+| Open period | Close | Closed | Independent period authority | Reconciliation/close checks pass; FinancialPeriodClosed emitted. |
+| Closed period | Reopen request/approve | Open (reopened) | Privileged independent authority | Reason and evidence required; reopen event and access trail retained. |
+| Any referenced master record | Deactivate/supersede | Inactive/superseded | Master-data authority | No destructive delete; existing transaction references remain valid. |
 
 ## 8. Database ownership and entity relationships
-Candidate entities: accounts, funds, dimensions, combinations, periods, rules.. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
+Own finance_accounts(id, code, name, account_type, parent_id, effective_from/to, status), funds, funding_sources, economic_classifications, dimension_types, dimensions, account_combinations, accounting_rules, currencies, financial_calendars, financial_years, accounting_periods, period_transition_history, master_data_versions and approval/audit references. Financial years own periods (one-to-many); combinations reference the relevant account/fund/classification/dimensions. Use unique code+version/effective constraints, date indexes, non-overlapping year/period validation and immutable transition history. Monetary columns in any owned financial table use DECIMAL. Other domains reference these IDs; they do not copy editable chart/calendar masters.
 
 ## 9. Backend responsibilities
-Laravel controllers adapt HTTP; Form Requests validate inputs; Eloquent models represent owned entities; services/actions enforce invariants and transaction boundaries; Policies/Gates authorize; Resources define response contracts; Events publish committed facts through outbox; listeners/jobs handle async/retry/scheduled work. Use DB transactions and row locks for concurrency-sensitive operations.
+FinancialMasterDataService validates versioned COA and combination graphs; CalendarService enforces year/period overlap, coverage, activation, close/reopen prerequisites; domain actions wrap activation and status changes in transactions. Form Requests validate payloads; Policies authorize finance roles; Resources return active version/status metadata; events include MasterDataVersionActivated, FinancialYearActivated, AccountingPeriodOpened, FinancialPeriodClosed and FinancialPeriodReopened. Jobs notify consumers/rebuild validation caches after commit. Period close command coordinates readiness queries with ledger (13) but module 05 owns period status.
 
 ## 10. API contracts and endpoint responsibilities
-/api/v1/finance/accounts, /funds, /periods.
-- GET /api/v1/finance/accounts: scoped paginated list; module.view; validate allowlisted filters and pagination.
-- POST /api/v1/finance/accounts: create domain record; module.create; validate required fields and owner references.
-- GET /api/v1/finance/accounts/{id}: authorized detail and lifecycle metadata.
-- PATCH /api/v1/finance/accounts/{id}: update mutable draft fields; module.update_draft; reject immutable states.
-- POST /api/v1/finance/accounts/{id}/actions/{action}: explicit domain command; distinct permission, current-state/scope/reason validation and idempotency for sensitive operations.
-Use /api/v1, Sanctum or approved service identity, stable resource IDs, UTC timestamps and decimal-safe serialization. Return consistent 401/403/404/409/422 errors; never expose stack traces or secrets.
+- GET /api/v1/finance/accounts, /funds, /dimensions, /account-combinations, /financial-years, /accounting-periods: paginated, permission-specific read; filter by status/effective date/code.
+- POST/PATCH /api/v1/finance/accounts and /dimensions: finance.coa.edit / finance.dimension.edit; validate unique code, parent and effective interval; respond with draft resource/version.
+- POST /api/v1/finance/account-combinations/validate: finance.account_combination.validate; request account/fund/classification/dimension IDs; response valid/errors and rule version; no activation side effect.
+- POST /api/v1/finance/master-data-versions/{id}/activate: finance.account_combination.activate; independent approval; returns active version and effective date.
+- POST /api/v1/finance/financial-years and /{id}/activate: finance.financial_year.create/activate; validate non-overlap and complete periods.
+- POST /api/v1/finance/accounting-periods/{id}/open|close|reopen: corresponding permission; close checks ledger readiness; reopen requires reason/evidence and approval. Return 409 on stale/closed conflicts, 422 on invalid dates/rules, 403 on insufficient scope.
+Responses include stable IDs, codes, effective dates, status, version and audit correlation; never allow generic updates to active/closed state.
 
 ## 11. Frontend responsibilities
-React/TypeScript dashboard/list, detail/history/evidence, draft form, work queue and module-specific exception/reconciliation pages. Tables use scoped filters/pagination; forms show server errors; irreversible actions confirm. Tailwind/shadcn and typed API client; accessible loading/empty/error states, working controls, no frontend-only security.
+COA tree editor with parent/type validation; dimension and fund registers; combination validation workspace showing failed rule paths; version comparison and activation queue; financial year calendar view; period register/calendar with future/open/closed/reopened badges; close checklist from ledger reconciliation status; controlled reopen request/evidence form; change history and invalid-reference report. Only authorized finance roles see actions; backend still rechecks.
 
 ## 12. Cross-module dependencies and integration events
-Consumed by budget, ledger, treasury, revenue, grants, debt. Only this module writes its records. Domain events publish after commit through outbox with event_id, type/version, occurred_at UTC, producer, entity ID, correlation/causation IDs and minimal payload. Consumers dedupe and retry safely. External adapters remain mocked until specifications, credentials and authorization are approved.
+Depends on 01 configuration, 02 identity, 03 org references and 04 approval. Budget 06/07, procurement/AP, ledger 13, treasury 14, revenue 15, assets 16, grants 18, payroll 19, debt 20 and reports 22 consume active references/calendar. Consumers never own copies. Events: MasterDataVersionActivated, AccountCombinationActivated, FinancialYearActivated, AccountingPeriodOpened, FinancialPeriodClosed, FinancialPeriodReopened. Outbox consumers invalidate caches and update read projections idempotently. Module 13 supplies close-readiness status; it does not own period state.
 
 ## 13. Security and audit requirements
-Enforce authentication, Policies/Gates, record/org scope, least privilege and maker-checker server-side. Protect sensitive data and private files. Log privileged actions, approvals, overrides, reversals and imports through canonical audit infrastructure. Preserve immutable audit evidence; do not create competing audit ledgers.
+Role-restricted access to chart/calendar administration; maker-checker for activation and close/reopen; no self-approval. Record before/after version hashes, actor, time, reason, evidence, correlation ID and approval. Closed period controls are enforced by ledger posting authorization and database/domain transaction, not frontend. Preserve historical account/calendar references. Monitor privileged changes.
 
 ## 14. Testing requirements
-Unit-test rules, calculations and transitions; feature-test endpoints, authorization and scope; integration-test dependency contracts, events/outbox/retries; security-test IDOR, privilege escalation and data leakage. Financial modules additionally test DECIMAL, rollback, row locks/concurrency, overspend, balanced journals, duplicate payments, idempotency, reconciliation and period locks.
+Test chart code uniqueness/effective dating, account hierarchy cycles, dimension combination rules, calendar overlap/period coverage, period transitions and permissions. Feature-test open/close/reopen endpoints and audit events. Integration-test consumers reject inactive combinations and closed periods. Concurrency-test simultaneous period close/post and ensure one serial outcome; verify failed activation/close rolls back with no partial status. Test KES decimal metadata and no float conversion.
 
 ## 15. Acceptance criteria
-All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ownership is respected; API/UI reflect lifecycle; events are retry-safe; audit is complete; applicable financial invariants hold; tests pass; documentation matches behavior; unresolved policy is not silently assumed.
+Exactly one authoritative financial year/calendar owner exists; periods belong to years, transitions are approved/audited, closed periods block posting, reopen is controlled, active master references are versioned, consumers can validate IDs without duplicate writes, and all lifecycle/API/security tests pass.
 
 ## 16. Unresolved business decisions
-Confirm roles, approval limits, legal/accounting rules, retention, classification and integration authority with accountable owners. No government affiliation or official integration is claimed.
-
-## Exceptions and failure handling
-Invalid dimension combination blocks activation/posting; overlapping effective periods require correction; closed period cannot be reopened without privileged approved record.
-
-## Reporting and operational visibility
-COA/dimension validity, inactive combinations, effective-date changes, period status and master-data approval history.
-
-## Implementation notes
-This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.
+County finance authority must approve fiscal calendar dates, accounting basis, chart structure/codes, fund and economic classification taxonomy, dimension requirements, currency scope, period-close checklist, reopen authority, retention and effective-date policy. No statutory or official threshold is assumed.

@@ -1,7 +1,7 @@
 # MODULE 26 — System Audit, Security and Monitoring
 
 ## 1. Purpose and scope
-Security events, privileged activity, monitoring incidents, backup/error health, integrity. This module owns security_events, monitoring_incidents, integrity_checks.. It does not own records of its dependencies or consumers.
+Security events, privileged activity, monitoring incidents, backup/error health, integrity. This module owns security_events, monitoring_incidents, integrity_checks. It does not own records of its dependencies or consumers.
 
 ## 2. Functional requirements
 Security events, privileged activity, monitoring incidents, backup/error health, integrity. Operational functions are limited to this domain; reference records remain administered by their owning module.
@@ -10,36 +10,48 @@ Security events, privileged activity, monitoring incidents, backup/error health,
 Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records.
 
 ## 4. Permissions and access restrictions
-Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
-
+| Permission | Responsible role | Approval required | Restrictions |
+|---|---|---|---|
+| `security.incident.view` | Domain reader | No | Enforce record and organizational scope. |
+| `security.incident.create` | Domain maker | No | Validate required owner references; maker cannot self-approve. |
+| `security.incident.update_draft` | Assigned record owner | No | Draft-only edits; preserve version and change history. |
+| `security.incident.submit` | Domain maker | No | Validate mandatory fields and evidence before submission. |
+| `security.incident.approve` | Independent delegated approver | Yes | Must differ from maker; authority and organization scope checked server-side. |
+| `security.incident.reject` | Assigned reviewer | No | Require reason; preserve decision history and permit correction only via defined return/resubmit. |
+| `security.incident.export` | Authorized analyst | Conditional for sensitive data | Apply same row scope and field masking as on-screen access. |
 ## 5. Module-specific business rules
-Append-only evidence; minimize payload; restrict event access. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Append-only evidence; minimize payload; restrict event access. Keep policy-dependent rules configurable pending county validation. Monetary DECIMAL controls apply only to amounts owned by this module.
 
 ## 6. Detailed business workflows
 Collect security/operational events → detect rule/threshold → create incident → triage/acknowledge → investigate/escalate → resolve with evidence → monitor integrity; never mutates business record.
 Initiation, mandatory validation and approval gates are defined above. On failure, Detection false positives can be closed with rationale; confirmed incidents escalate and preserve evidence; monitoring outage triggers operational alert.
 
 ## 7. State transitions and lifecycle rules
-Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
+| Current state | Action | Next state | Actor / preconditions | Side effects / failure |
+|---|---|---|---|---|
+| Collect security/operational events | detect rule/threshold | detect rule/threshold | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| detect rule/threshold | create incident | create incident | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| create incident | triage/acknowledge | triage/acknowledge | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| triage/acknowledge | investigate/escalate | investigate/escalate | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| investigate/escalate | resolve with evidence | resolve with evidence | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| resolve with evidence | monitor integrity; never mutates business record. | monitor integrity; never mutates business record. | Security operations monitors signals; incident handlers investigate/contain; system admins remediate infrastructure; auditors access protected logs; source module owners remediate business records. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
 
+No caller may set state directly. Apply idempotency to commands whose retry could create duplicate effects. Financial reversals and period locks are enforced by financial owners (05/07/12/13/14/15 as applicable), not copied into unrelated domains.
 ## 8. Database ownership and entity relationships
-Candidate entities: security_events, monitoring_incidents, integrity_checks.. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
+security_events, monitoring_incidents, integrity_checks. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
 
 ## 9. Backend responsibilities
-Laravel controllers adapt HTTP; Form Requests validate inputs; Eloquent models represent owned entities; services/actions enforce invariants and transaction boundaries; Policies/Gates authorize; Resources define response contracts; Events publish committed facts through outbox; listeners/jobs handle async/retry/scheduled work. Use DB transactions and row locks for concurrency-sensitive operations.
-
+The module owns the records and relationships listed in section 8. Laravel application services implement the workflows in section 6; Form Requests validate shape; Policies/Gates enforce named capabilities, organization scope and maker-checker; Resources define stable responses. Use database transactions for state changes, append audit decisions, and publish versioned outbox events after commit. Cross-module dependencies are called through the documented owner contract; no direct writes to other module records.
 ## 10. API contracts and endpoint responsibilities
-/api/v1/security/events; /monitoring/incidents.
-- GET /api/v1/security/events: scoped paginated list; module.view; validate allowlisted filters and pagination.
-- POST /api/v1/security/events: create domain record; module.create; validate required fields and owner references.
-- GET /api/v1/security/events/{id}: authorized detail and lifecycle metadata.
-- PATCH /api/v1/security/events/{id}: update mutable draft fields; module.update_draft; reject immutable states.
-- POST /api/v1/security/events/{id}/actions/{action}: explicit domain command; distinct permission, current-state/scope/reason validation and idempotency for sensitive operations.
-Use /api/v1, Sanctum or approved service identity, stable resource IDs, UTC timestamps and decimal-safe serialization. Return consistent 401/403/404/409/422 errors; never expose stack traces or secrets.
+| Method | Endpoint | Purpose / request and authorization | Response / errors |
+|---|---|---|---|
+| POST | `/api/v1/security/incidents/{id}/contain` | Record containment action | `security.incident.contain`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
+| POST | `/api/v1/security/incidents/{id}/resolve` | Record resolution evidence | `security.incident.resolve`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
+| POST | `/api/v1/security/incidents/{id}/close` | Independently close incident | `security.incident.close`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
 
+Commands are transaction-safe; sensitive/retryable commands require an Idempotency-Key. Return stable error envelopes and redact sensitive fields.
 ## 11. Frontend responsibilities
-React/TypeScript dashboard/list, detail/history/evidence, draft form, work queue and module-specific exception/reconciliation pages. Tables use scoped filters/pagination; forms show server errors; irreversible actions confirm. Tailwind/shadcn and typed API client; accessible loading/empty/error states, working controls, no frontend-only security.
-
+Provide a System Audit, Security and Monitoring register, record detail/history, draft form, review/approval queue, and exception view appropriate to the states above. Include scoped search and filters, evidence links, role-specific command availability, validation feedback and stale-version recovery. The server remains authoritative for every action; never show an unconfirmed command as successful.
 ## 12. Cross-module dependencies and integration events
 Consumes IAM/platform telemetry; complement shared audit; not module 21. Only this module writes its records. Domain events publish after commit through outbox with event_id, type/version, occurred_at UTC, producer, entity ID, correlation/causation IDs and minimal payload. Consumers dedupe and retry safely. External adapters remain mocked until specifications, credentials and authorization are approved.
 
@@ -47,8 +59,7 @@ Consumes IAM/platform telemetry; complement shared audit; not module 21. Only th
 Enforce authentication, Policies/Gates, record/org scope, least privilege and maker-checker server-side. Protect sensitive data and private files. Log privileged actions, approvals, overrides, reversals and imports through canonical audit infrastructure. Preserve immutable audit evidence; do not create competing audit ledgers.
 
 ## 14. Testing requirements
-Unit-test rules, calculations and transitions; feature-test endpoints, authorization and scope; integration-test dependency contracts, events/outbox/retries; security-test IDOR, privilege escalation and data leakage. Financial modules additionally test DECIMAL, rollback, row locks/concurrency, overspend, balanced journals, duplicate payments, idempotency, reconciliation and period locks.
-
+Test every documented state transition and its failure conditions, approval separation, unauthorized/out-of-scope access, duplicate/idempotent request, stale update, event retry, audit evidence and owner-contract integration. Test domain-specific business validation and reporting scenarios.
 ## 15. Acceptance criteria
 All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ownership is respected; API/UI reflect lifecycle; events are retry-safe; audit is complete; applicable financial invariants hold; tests pass; documentation matches behavior; unresolved policy is not silently assumed.
 

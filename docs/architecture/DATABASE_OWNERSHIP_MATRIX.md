@@ -4,11 +4,11 @@ Candidate schema groups (not migrations). Use MySQL 8, stable keys selected at b
 
 | Owner | Candidate owned tables |
 |---|---|
-| 01 System Foundation and Configuration | settings, reference_sequences |
+| 01 System Foundation and Configuration | settings, reference_sequences, platform_parameters |
 | 02 Identity and Access Management | users, roles, permissions, scopes |
 | 03 County Organization Management | organizational_units, cost_centres, programmes, project identities |
 | 04 Workflow and Approval Engine | workflow_definitions, steps, instances, decisions |
-| 05 Financial Master Data Management | accounts, funds, dimensions, combinations, periods |
+| 05 Financial Master Data Management | accounts, funds, funding_sources, economic_classifications, dimension_types, dimensions, account_combinations, accounting_rules, currencies, financial_calendars, financial_years, accounting_periods, period_transition_history, master_data_versions |
 | 06 Budget Planning and Preparation | budget_calendars, versions, estimates, submissions |
 | 07 Budget Execution and Control | allocations, releases, commitments, encumbrances |
 | 08 Supplier Management | suppliers, documents, restricted bank details |

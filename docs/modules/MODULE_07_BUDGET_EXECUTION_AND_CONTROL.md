@@ -1,7 +1,7 @@
 # MODULE 07 — Budget Execution and Control
 
 ## 1. Purpose and scope
-Allocations, releases, availability, commitments, encumbrances, liquidation and adjustments. This module owns allocations, releases, commitments, adjustments, commitment_events.. It does not own records of its dependencies or consumers.
+Allocations, releases, availability, commitments, encumbrances, liquidation and adjustments. This module owns allocations, releases, commitments, adjustments, commitment_events. It does not own records of its dependencies or consumers.
 
 ## 2. Functional requirements
 Allocations, releases, availability, commitments, encumbrances, liquidation and adjustments. Operational functions are limited to this domain; reference records remain administered by their owning module.
@@ -10,36 +10,47 @@ Allocations, releases, availability, commitments, encumbrances, liquidation and 
 Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability.
 
 ## 4. Permissions and access restrictions
-Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
-
+| Permission | Responsible role | Approval required | Restrictions |
+|---|---|---|---|
+| `budget_execution.commitment.view` | Domain reader | No | Enforce record and organizational scope. |
+| `budget_execution.commitment.create` | Domain maker | No | Validate required owner references; maker cannot self-approve. |
+| `budget_execution.commitment.update_draft` | Assigned record owner | No | Draft-only edits; preserve version and change history. |
+| `budget_execution.commitment.submit` | Domain maker | No | Validate mandatory fields and evidence before submission. |
+| `budget_execution.commitment.approve` | Independent delegated approver | Yes | Must differ from maker; authority and organization scope checked server-side. |
+| `budget_execution.commitment.reject` | Assigned reviewer | No | Require reason; preserve decision history and permit correction only via defined return/resubmit. |
+| `budget_execution.commitment.export` | Authorized analyst | Conditional for sensitive data | Apply same row scope and field masking as on-screen access. |
 ## 5. Module-specific business rules
-Lock balance during check; reject overspend; idempotent commitments. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Lock balance during check; reject overspend; idempotent commitments. Keep policy-dependent rules configurable pending county validation. Monetary DECIMAL controls apply only to amounts owned by this module.
 
 ## 6. Detailed business workflows
 Load approved budget → allocate/release → request reservation → lock and check available balance → commit/encumber → liquidate/release/adjust with approval and audit.
 Initiation, mandatory validation and approval gates are defined above. On failure, Insufficient availability blocks reservation; concurrent requests serialize/one fails; release/liquidation must reference original commitment; override requires configured authority and reason.
 
 ## 7. State transitions and lifecycle rules
-Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
+| Current state | Action | Next state | Actor / preconditions | Side effects / failure |
+|---|---|---|---|---|
+| Load approved budget | allocate/release | allocate/release | Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| allocate/release | request reservation | request reservation | Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| request reservation | lock and check available balance | lock and check available balance | Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| lock and check available balance | commit/encumber | commit/encumber | Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
+| commit/encumber | liquidate/release/adjust with approval and audit. | liquidate/release/adjust with approval and audit. | Budget controllers load approved budgets; procurement/AP request reservation or commitment; authorized officers approve adjustment/release; finance monitors exceptions and availability. Validate scope, evidence and current version before transition. | Commit state, decision history and audit reference atomically; emit event after commit. On failed prerequisite, preserve source state and return actionable validation/conflict. |
 
+No caller may set state directly. Apply idempotency to commands whose retry could create duplicate effects. Financial reversals and period locks are enforced by financial owners (05/07/12/13/14/15 as applicable), not copied into unrelated domains.
 ## 8. Database ownership and entity relationships
-Candidate entities: allocations, releases, commitments, adjustments, commitment_events.. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
+allocations, releases, commitments, adjustments, commitment_events. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
 
 ## 9. Backend responsibilities
-Laravel controllers adapt HTTP; Form Requests validate inputs; Eloquent models represent owned entities; services/actions enforce invariants and transaction boundaries; Policies/Gates authorize; Resources define response contracts; Events publish committed facts through outbox; listeners/jobs handle async/retry/scheduled work. Use DB transactions and row locks for concurrency-sensitive operations.
-
+The module owns the records and relationships listed in section 8. Laravel application services implement the workflows in section 6; Form Requests validate shape; Policies/Gates enforce named capabilities, organization scope and maker-checker; Resources define stable responses. Use database transactions for state changes, append audit decisions, and publish versioned outbox events after commit. Cross-module dependencies are called through the documented owner contract; no direct writes to other module records.
 ## 10. API contracts and endpoint responsibilities
-/api/v1/budget/availability; /commitments; /releases.
-- GET /api/v1/budget/availability: scoped paginated list; module.view; validate allowlisted filters and pagination.
-- POST /api/v1/budget/availability: create domain record; module.create; validate required fields and owner references.
-- GET /api/v1/budget/availability/{id}: authorized detail and lifecycle metadata.
-- PATCH /api/v1/budget/availability/{id}: update mutable draft fields; module.update_draft; reject immutable states.
-- POST /api/v1/budget/availability/{id}/actions/{action}: explicit domain command; distinct permission, current-state/scope/reason validation and idempotency for sensitive operations.
-Use /api/v1, Sanctum or approved service identity, stable resource IDs, UTC timestamps and decimal-safe serialization. Return consistent 401/403/404/409/422 errors; never expose stack traces or secrets.
+| Method | Endpoint | Purpose / request and authorization | Response / errors |
+|---|---|---|---|
+| POST | `/api/v1/commitments/{id}/validate` | Validate availability atomically | `budget_execution.commitment.validate`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
+| POST | `/api/v1/commitments/{id}/liquidate` | Record matched expenditure liquidation | `budget_execution.commitment.liquidate`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
+| POST | `/api/v1/budget-transfers/{id}/approve` | Approve transfer with independent authority | `budget_execution.transfer.approve`; check scope, current state, required reason/evidence and maker-checker. | 200/202 with resource state/version and correlation ID; 403/409/422 on authorization, conflict or invalid fields. |
 
+Commands are transaction-safe; sensitive/retryable commands require an Idempotency-Key. Return stable error envelopes and redact sensitive fields.
 ## 11. Frontend responsibilities
-React/TypeScript dashboard/list, detail/history/evidence, draft form, work queue and module-specific exception/reconciliation pages. Tables use scoped filters/pagination; forms show server errors; irreversible actions confirm. Tailwind/shadcn and typed API client; accessible loading/empty/error states, working controls, no frontend-only security.
-
+Provide a Budget Execution and Control register, record detail/history, draft form, review/approval queue, and exception view appropriate to the states above. Include scoped search and filters, evidence links, role-specific command availability, validation feedback and stale-version recovery. The server remains authoritative for every action; never show an unconfirmed command as successful.
 ## 12. Cross-module dependencies and integration events
 Consumes approved budget; serves 09/12; emits CommitmentApproved. Only this module writes its records. Domain events publish after commit through outbox with event_id, type/version, occurred_at UTC, producer, entity ID, correlation/causation IDs and minimal payload. Consumers dedupe and retry safely. External adapters remain mocked until specifications, credentials and authorization are approved.
 
@@ -47,8 +58,7 @@ Consumes approved budget; serves 09/12; emits CommitmentApproved. Only this modu
 Enforce authentication, Policies/Gates, record/org scope, least privilege and maker-checker server-side. Protect sensitive data and private files. Log privileged actions, approvals, overrides, reversals and imports through canonical audit infrastructure. Preserve immutable audit evidence; do not create competing audit ledgers.
 
 ## 14. Testing requirements
-Unit-test rules, calculations and transitions; feature-test endpoints, authorization and scope; integration-test dependency contracts, events/outbox/retries; security-test IDOR, privilege escalation and data leakage. Financial modules additionally test DECIMAL, rollback, row locks/concurrency, overspend, balanced journals, duplicate payments, idempotency, reconciliation and period locks.
-
+Test every documented state transition and its failure conditions, approval separation, unauthorized/out-of-scope access, duplicate/idempotent request, stale update, event retry, audit evidence and owner-contract integration. Test domain-specific concurrent availability checks and no overspend scenarios.
 ## 15. Acceptance criteria
 All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ownership is respected; API/UI reflect lifecycle; events are retry-safe; audit is complete; applicable financial invariants hold; tests pass; documentation matches behavior; unresolved policy is not silently assumed.
 
