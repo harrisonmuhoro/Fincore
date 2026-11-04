@@ -1,35 +1,43 @@
 # MODULE 02 — Identity and Access Management
 
-## A. Module overview
-**Purpose:** Own authentication, user and account lifecycle, password management, MFA, roles, permissions, organizational access scopes, user assignments, sessions, suspension, and access history. This specification is conceptual. Business owners, exact policies and schemas require validation. Primary users include relevant departmental operators, authorized approvers, administrators and auditors. Value: controlled, traceable execution with clear ownership.
+## 1. Purpose and boundaries
+Own user identity, authentication, password/MFA lifecycle, roles, permissions, organization scopes, assignments, sessions, suspension and access history. Do not own county organizational hierarchy (03) or workflow decisions (04).
 
-## B. Functional scope
-Own: Own authentication, user and account lifecycle, password management, MFA, roles, permissions, organizational access scopes, user assignments, sessions, suspension, and access history. User operations cover create, view, update draft, submit and permitted lifecycle actions. Administration configures reference data and access within delegated authority. Reporting is limited to this domain's records and status. Out of scope: writing another module's authoritative records.
+## 2. Functional requirements
+Provision and deactivate accounts; authenticate/logout; password reset; MFA enrollment/challenge; assign roles and scoped grants; suspend/reinstate users; inspect sessions and access history; provide admin and security review views.
 
-## C. Business workflows
-Start with an authorized user and valid reference data. Create a draft with a generated reference and required fields; validate scope, uniqueness, effective dates and related IDs. Save as draft, submit for configured workflow approval, and record each decision with actor/time/reason. Approvers may approve, return for correction or reject; returned items retain history and can be resubmitted. On approval perform the module-owned final action atomically, publish the resulting domain event after commit and expose terminal status. Failed validations leave no partial financial effect. Define cancellation, amendment and reversal rules before implementation; posted financial events are never silently edited/deleted.
+## 3. Actors and permissions
+Staff users, IAM administrators, security officers and auditors. Permissions include iam.users.view/create/update/suspend, iam.roles.manage, iam.scopes.assign, iam.sessions.revoke, iam.audit.view. Scope assignments require separate approval; privileged accounts require MFA per policy.
 
-## D. Database ownership
-Candidate owned table groups: users, roles, permissions, user_scopes, sessions. Use stable primary keys, timestamps and explicit statuses; document FKs, indexes for organization/status/date and unique business/reference/idempotency keys. Foreign references to other domains do not confer ownership. Monetary columns use DECIMAL. Preserve audit/posted history; no cascading deletion of financial records. Final entities, key type, constraints and retention need schema review.
+## 4. Business rules
+Suspended accounts cannot authenticate or hold active tokens. Role grants are least privilege and effective-dated. Deny by default. Prevent privilege escalation through self-assignment. Record actor, reason and timestamp for role/scope changes. Authentication errors must not reveal whether an account exists.
 
-## E. Backend architecture
-Laravel route/controller adapters, Form Requests, owned Eloquent models, domain service/actions, Policies/Gates, API Resources and domain events. Add listeners/jobs/scheduled tasks only for real asynchronous or timed behavior. Keep controllers thin, transaction boundaries explicit, and cross-module calls behind contracts. Do not invent filenames or namespaces before inspecting repository conventions.
+## 5. Workflows and state transitions
+Invited → pending_activation → active → suspended/disabled. Activation verifies identity and sets credentials/MFA as policy requires. Role assignment request → independent approval where privileged → effective grant. Revocation invalidates sessions/tokens. Password reset uses expiring single-use challenge.
 
-## F. Frontend architecture
-Provide list/search/filter and detail views; create/edit draft form; lifecycle/approval queue where applicable; history/evidence panel and domain dashboard summaries. Use established shell and component library, strict TypeScript, accessible validation/loading/empty/error states and working actions. Suggested route family: /[module], /[module]/:id, /[module]/new; adapt to app routing conventions.
+## 6. Database ownership and relationships
+Own users, roles, permissions, role_permissions, user_role_assignments, user_org_scopes, sessions/authentication events and MFA factors. Keys reference organization IDs from module 03; no duplicate organization tables. Index normalized login identifier, status and user/scope; enforce unique login and assignment tuples. Never store plaintext credentials.
 
-## G. API specification
-Conceptual versioned family: GET /[resources], POST /[resources], GET /[resources]/{id}, PATCH /[resources]/{id}; explicit POST command routes for submit/approve/return/reject and module-specific finalization. Paginate/filter allowlisted fields. Authenticate with Sanctum or approved service identity; authorize every object and organizational scope. Form and domain validation; decimal-safe monetary serialization; standard errors; idempotency for sensitive commands. Publish OpenAPI contract after decisions.
+## 7. Backend responsibilities
+Laravel Sanctum authentication, controllers, Form Requests, User/Role/Scope models, credential and authorization services, Policies/Gates, API Resources, security events and queued notification jobs. Centralize scope evaluation; revoke tokens transactionally on suspension.
 
-## H. Permissions and security
-Define module.view/create/update_draft/submit/approve/reject/administer/export permissions and least-privilege scope. Separate maker and approver; forbid self-approval where relevant. Enforce organization and record scope server-side. Mask/restrict sensitive data; protect uploads/downloads; log privileged changes through canonical audit service. Approval limits remain configurable and await validated authority.
+## 8. Frontend responsibilities
+Login/MFA/reset pages; user directory/detail; role and scope assignment screens; session revocation; access history. Hide unauthorized actions for usability, show server errors safely, require confirmation for suspension/revocation.
 
-## I. Integration dependencies
-Depends on: Depends on foundation and organization reference contracts. All protected modules depend on its identity and authorization interfaces. Consuming modules must be confirmed in the cross-module map. Consume only published contracts/events; publish a versioned event after committed state change with event ID, schema version, entity ID, timestamp, actor/scope references, correlation/causation IDs and minimal payload. Common events include lifecycle approved/completed; choose exact names and fields with consumers. External systems remain mock adapters absent specifications/credentials/authorization.
+## 9. API contracts
+POST /api/v1/auth/login, /logout, /password/forgot, /password/reset, /mfa/challenge; GET/POST /api/v1/users; GET/PATCH /api/v1/users/{id}; POST /api/v1/users/{id}/suspend, /reinstate, /roles, /scopes; GET /api/v1/access-events. Enforce rate limits, CSRF/session protections as applicable, validation, MFA and object/scope authorization.
 
-## J. Testing and acceptance criteria
-Unit-test rules and state transitions; feature-test endpoints, validation and responses; integration-test dependencies/events; security-test scope, authorization, sensitive data and segregation; test financial invariants/concurrency/idempotency when applicable. Complete when the scoped workflow works end-to-end, ownership and access controls hold, documented contracts are honored, UI actions work, migration/API docs match behavior and relevant regression checks pass.
+## 10. Cross-module dependencies
+Depends on foundation (01) and organization references (03); all business modules consume its identity and authorization contracts. Emit UserActivated, UserSuspended, RoleAssignmentChanged and PrivilegedAccessRecorded with minimal payload; notification (24) and security monitoring (26) consume events.
 
-## Decisions and constraints
-Do not hardcode legal or financial thresholds. Use fictional seed data; do not claim official government affiliation or integrations. Use MySQL 8 and project-approved migration conventions. Preserve existing repository changes and document unresolved decisions rather than fabricating policy.
+## 11. Security and audit
+MFA for privileged users; secure session cookies/token handling, rotation, expiry, brute-force protection and generic auth errors. Policies/Gates on every endpoint. Audit role/scope changes and privileged reads; protect personal data and restrict audit access.
 
+## 12. Testing requirements
+Test credential lifecycle, MFA, token revocation, suspended-user denial, role/scope boundaries, maker-checker, rate limiting, session expiry, IDOR and privilege escalation. Integration-test organization lookup and notification/security events.
+
+## 13. Acceptance criteria
+Users can authenticate and recover access securely; administrators can assign scoped roles without escalation; suspension revokes access; all protected endpoints enforce policy; privileged activity is traceable; tests prove denial as well as success.
+
+## 14. Implementation notes
+Confirm identity proofing, MFA methods, password/session policy, privileged role catalogue, privacy/retention and emergency access. Do not assume government identity-provider integration.

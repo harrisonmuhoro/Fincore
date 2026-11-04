@@ -33,3 +33,33 @@ Unit-test rules and state transitions; feature-test endpoints, validation and re
 ## Decisions and constraints
 Do not hardcode legal or financial thresholds. Use fictional seed data; do not claim official government affiliation or integrations. Use MySQL 8 and project-approved migration conventions. Preserve existing repository changes and document unresolved decisions rather than fabricating policy.
 
+
+## Detailed module specification
+
+### Purpose and boundary
+Grants and Transfers Own only the records listed here: Restricted-fund eligibility validated; evidence retained; actual payment via Treasury.. Cross-domain data is referenced by owner ID.
+
+### Functional requirements and actors
+Operators manage drafts and lifecycle actions; designated reviewers approve, return or reject; administrators configure domain reference data; auditors receive scoped read-only access. Functions include: Grants and Transfers
+
+### Business rules and state
+Grant agreements, conditions, allocations, disbursement tracking, utilization/compliance. Lifecycle: draft → submitted → under_review → approved/returned/rejected → completed. Return requires a reason and preserves history. Finalization is atomic. Posted accounting effects require reversal, never silent edit.
+
+### Data relationships
+Candidate owned tables: Restricted-fund eligibility validated; evidence retained; actual payment via Treasury.. Index scope/status/business date; enforce unique natural/reference and idempotency keys. Reference org/user/financial IDs through their owning modules. Use DECIMAL for every amount and no cascading deletion of financial evidence.
+
+### Backend and frontend
+Backend: Laravel route/controller, Form Requests, domain models/services/actions, Policies/Gates, Resources, events and queue jobs where needed. Frontend: React/TypeScript list, detail, create/edit, filter and lifecycle queue at /grants-and-transfer-management; accessible error/loading/empty states and functioning actions.
+
+### API contract and permissions
+grants, conditions, allocations, disbursement_refs, compliance_reports. All endpoints use /api/v1, authenticate, authorize record and organization scope, validate transitions, paginate/filter lists and return stable resource IDs. Explicit POST lifecycle commands; no generic status patch. Permissions are module.view/create/update/submit/approve/administer/export; maker and approver separated.
+
+### Dependencies, audit and security
+/api/v1/grants; POST allocate/report/close. Use documented contracts and outbox events; envelope carries event ID/type/version, time, entity and correlation IDs with minimal payload. Consumers are idempotent. Protect sensitive fields/files; log privileged actions using canonical audit infrastructure; server-side authorization is mandatory.
+
+### Test and acceptance conditions
+Unit-test rules/state transitions; feature-test API validation/authorization; integration-test dependencies/events/retries; security-test scope and leakage; financial domains test decimals, locking, idempotency, duplicate prevention and reconciliation. Complete when workflows, ownership, permission boundaries, API/UI, audit, tests and docs meet these requirements.
+
+### Unresolved decisions
+Confirm county roles, retention, thresholds, statutory or accounting requirements and integration authorization with owners. Use fictional data; no official affiliation or live integration is implied.
+
