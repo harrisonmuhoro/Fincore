@@ -4,20 +4,20 @@
 Award-linked contracts, amendments, deliverables, milestones, schedules and closure. This module owns contracts, amendments, milestones, deliverables, payment_schedules.. It does not own records of its dependencies or consumers.
 
 ## 2. Functional requirements
-Award-linked contracts, amendments, deliverables, milestones, schedules and closure. Provide record creation/maintenance, lifecycle actions, scoped search, exception handling, history/evidence and domain-specific operational reporting. Admin tools manage this domain's configuration only.
+Award-linked contracts, amendments, deliverables, milestones, schedules and closure. Operational functions are limited to this domain; reference records remain administered by their owning module.
 
 ## 3. Actors and responsibilities
-Contract Management. Operators prepare and maintain records; authorized reviewers decide; administrators maintain module configuration; auditors have scoped read-only access. Consumers access only documented services/views.
+Contract officers register approved awards; contract managers track obligations; technical officers certify deliverables; independent approvers approve amendments; AP reads payment schedules.
 
 ## 4. Permissions and access restrictions
 Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
 
 ## 5. Module-specific business rules
-Amendment approval; validate cumulative changes; preserve original award. Validate references against the owning module contract, uniqueness, scope and lifecycle state. Keep unverified law and approval thresholds configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Amendment approval; validate cumulative changes; preserve original award. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
 
 ## 6. Detailed business workflows
 Import awarded contract → validate parties, values and dates → approve registration → track milestones/deliverables → approve amendment → expiry/closure with outstanding obligations checked.
-Start only with valid references and an authorized actor. Validate before state changes; record actor, timestamp, reason and correlation ID. Return requires reason and preserves prior decisions. Rejection is terminal unless approved reopen policy exists. Finalization is atomic; reconcile uncertain external results before retry.
+Initiation, mandatory validation and approval gates are defined above. On failure, Disputed deliverable, expired contract or amendment beyond authorized scope is flagged and blocks downstream certification/payment as configured; retain original signed version.
 
 ## 7. State transitions and lifecycle rules
 Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
@@ -54,6 +54,12 @@ All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ow
 
 ## 16. Unresolved business decisions
 Confirm roles, approval limits, legal/accounting rules, retention, classification and integration authority with accountable owners. No government affiliation or official integration is claimed.
+
+## Exceptions and failure handling
+Disputed deliverable, expired contract or amendment beyond authorized scope is flagged and blocks downstream certification/payment as configured; retain original signed version.
+
+## Reporting and operational visibility
+Contract value vs approved amendments, milestone/deliverable status, expiry, obligations and performance exceptions.
 
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

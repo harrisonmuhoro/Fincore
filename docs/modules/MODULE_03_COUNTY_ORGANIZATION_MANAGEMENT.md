@@ -4,20 +4,20 @@
 County hierarchy, departments, directorates, sub-counties, wards, cost centres, programme/project identities. This module owns org_units, org_relationships, cost_centres, programmes, project_refs.. It does not own records of its dependencies or consumers.
 
 ## 2. Functional requirements
-County hierarchy, departments, directorates, sub-counties, wards, cost centres, programme/project identities. Provide record creation/maintenance, lifecycle actions, scoped search, exception handling, history/evidence and domain-specific operational reporting. Admin tools manage this domain's configuration only.
+County hierarchy, departments, directorates, sub-counties, wards, cost centres, programme/project identities. Operational functions are limited to this domain; reference records remain administered by their owning module.
 
 ## 3. Actors and responsibilities
-County Organization. Operators prepare and maintain records; authorized reviewers decide; administrators maintain module configuration; auditors have scoped read-only access. Consumers access only documented services/views.
+County configuration stewards define units; department heads validate reporting relationships; finance confirms cost-centre use; IAM consumes effective-dated organization assignments.
 
 ## 4. Permissions and access restrictions
 Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
 
 ## 5. Module-specific business rules
-Effective dating; hierarchy acyclic; referenced units archived not deleted. Validate references against the owning module contract, uniqueness, scope and lifecycle state. Keep unverified law and approval thresholds configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Effective dating; hierarchy acyclic; referenced units archived not deleted. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
 
 ## 6. Detailed business workflows
 Propose unit/relationship → validate parent type and no hierarchy cycle → approve/effect-date → active → supersede/archive; referenced nodes cannot be hard deleted.
-Start only with valid references and an authorized actor. Validate before state changes; record actor, timestamp, reason and correlation ID. Return requires reason and preserves prior decisions. Rejection is terminal unless approved reopen policy exists. Finalization is atomic; reconcile uncertain external results before retry.
+Initiation, mandatory validation and approval gates are defined above. On failure, Invalid parent/type or hierarchy cycle blocks publication; restructuring preserves old effective hierarchy and requires remapping review for active budgets/users.
 
 ## 7. State transitions and lifecycle rules
 Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
@@ -54,6 +54,12 @@ All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ow
 
 ## 16. Unresolved business decisions
 Confirm roles, approval limits, legal/accounting rules, retention, classification and integration authority with accountable owners. No government affiliation or official integration is claimed.
+
+## Exceptions and failure handling
+Invalid parent/type or hierarchy cycle blocks publication; restructuring preserves old effective hierarchy and requires remapping review for active budgets/users.
+
+## Reporting and operational visibility
+Effective organization chart, current/historical unit roster, cost-centre mappings and unresolved reorganization references.
 
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

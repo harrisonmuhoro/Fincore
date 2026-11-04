@@ -4,20 +4,20 @@
 Streams, tariffs, assessments, invoices, receipts, collections, arrears and reconciliation. This module owns revenue_streams, tariffs, assessments, invoices, receipts, allocations.. It does not own records of its dependencies or consumers.
 
 ## 2. Functional requirements
-Streams, tariffs, assessments, invoices, receipts, collections, arrears and reconciliation. Provide record creation/maintenance, lifecycle actions, scoped search, exception handling, history/evidence and domain-specific operational reporting. Admin tools manage this domain's configuration only.
+Streams, tariffs, assessments, invoices, receipts, collections, arrears and reconciliation. Operational functions are limited to this domain; reference records remain administered by their owning module.
 
 ## 3. Actors and responsibilities
-Revenue Management. Operators prepare and maintain records; authorized reviewers decide; administrators maintain module configuration; auditors have scoped read-only access. Consumers access only documented services/views.
+Revenue officers configure approved tariffs and assess; cashiers/collectors record receipts; supervisors void/refund; treasury reconciles settlement; finance consumes accounting result.
 
 ## 4. Permissions and access restrictions
 Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
 
 ## 5. Module-specific business rules
-Unique receipts; controlled void/refund; tariff effective dating; callback replay protection. Validate references against the owning module contract, uniqueness, scope and lifecycle state. Keep unverified law and approval thresholds configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
+Unique receipts; controlled void/refund; tariff effective dating; callback replay protection. Keep any unverified statutory rule or threshold configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
 
 ## 6. Detailed business workflows
 Configure effective tariff → assess liable account → issue invoice → accept collection callback/cashier receipt idempotently → allocate receipt → arrears follow-up → reconcile collections; void/refund controlled.
-Start only with valid references and an authorized actor. Validate before state changes; record actor, timestamp, reason and correlation ID. Return requires reason and preserves prior decisions. Rejection is terminal unless approved reopen policy exists. Finalization is atomic; reconcile uncertain external results before retry.
+Initiation, mandatory validation and approval gates are defined above. On failure, Duplicate callback/receipt is idempotently ignored; void/refund requires reason and approval; unexplained collection variance remains open for reconciliation.
 
 ## 7. State transitions and lifecycle rules
 Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
@@ -54,6 +54,12 @@ All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ow
 
 ## 16. Unresolved business decisions
 Confirm roles, approval limits, legal/accounting rules, retention, classification and integration authority with accountable owners. No government affiliation or official integration is claimed.
+
+## Exceptions and failure handling
+Duplicate callback/receipt is idempotently ignored; void/refund requires reason and approval; unexplained collection variance remains open for reconciliation.
+
+## Reporting and operational visibility
+Assessment-to-receipt collection, arrears aging, tariff version, collection-channel settlement and unresolved reconciliation differences.
 
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

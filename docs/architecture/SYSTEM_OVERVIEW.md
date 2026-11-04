@@ -8,5 +8,8 @@ Departmental requesters, budget and finance officers, procurement/store/revenue 
 ## Technology and boundaries
 Laravel/PHP 8.3+, Sanctum, REST API, Policies/Gates, queues; React/TypeScript/Vite/Tailwind/shadcn; MySQL 8, Redis and private document storage. Modular monolith with domain-owned data and explicit contracts. KES is default currency. External bank, e-GP, payroll, payment and government reporting remain external; use mocks until specifications, credentials and authorization exist. Payroll is integration-first.
 
-## Integrity and status
-All amounts use DECIMAL, financial writes use transactions and concurrency controls, sensitive actions are idempotent, journals balance, posted entries are immutable and corrected by reversal/adjustment, closed periods lock. Fictional seed data only. Repository inspection found no application source or README; documentation is a blueprint, not implemented software.
+## Repository and implementation status
+The repository contains a root README, documentation indexes, architecture documents, module specifications, implementation prompts, decisions and engineering standards. The inspected repository does not contain Laravel backend source, React frontend source, database migrations or implemented business functionality. These documents are a proposed blueprint, not evidence of a deployed or legally validated system.
+
+## Integrity
+All monetary storage uses MySQL DECIMAL and decimal-safe calculations. Financial writes use transactions and concurrency controls; budget reservations, commitments, actual expenditure and releases are distinct. Journals balance before posting; posted entries are immutable and corrected by linked authorized reversals/adjustments. Closed periods reject posting unless an approved reopening process exists. Payment commands are idempotent; uncertain external outcomes are reconciled before retry. Use fictional seed data only.
