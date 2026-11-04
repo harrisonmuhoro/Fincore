@@ -1,65 +1,59 @@
 # MODULE 25 — Integration and External System Gateway
 
-## A. Module overview
-**Purpose:** Own banking/payment/e-GP/payroll/revenue/government-reporting adapters, webhooks, credentials, monitoring, retries, error handling and integration audit logs. Use mocks absent approved specifications and credentials. This specification is conceptual. Business owners, exact policies and schemas require validation. Primary users include relevant departmental operators, authorized approvers, administrators and auditors. Value: controlled, traceable execution with clear ownership.
+## 1. Purpose and scope
+Adapters, credentials refs, webhook ingress, retries, monitoring and transport audit. This module owns integration_connections, messages, webhooks, attempts, incidents.. It does not own records of its dependencies or consumers.
 
-## B. Functional scope
-Own: Own banking/payment/e-GP/payroll/revenue/government-reporting adapters, webhooks, credentials, monitoring, retries, error handling and integration audit logs. Use mocks absent approved specifications and credentials. User operations cover create, view, update draft, submit and permitted lifecycle actions. Administration configures reference data and access within delegated authority. Reporting is limited to this domain's records and status. Out of scope: writing another module's authoritative records.
+## 2. Functional requirements
+Adapters, credentials refs, webhook ingress, retries, monitoring and transport audit. Provide record creation/maintenance, lifecycle actions, scoped search, exception handling, history/evidence and domain-specific operational reporting. Admin tools manage this domain's configuration only.
 
-## C. Business workflows
-Start with an authorized user and valid reference data. Create a draft with a generated reference and required fields; validate scope, uniqueness, effective dates and related IDs. Save as draft, submit for configured workflow approval, and record each decision with actor/time/reason. Approvers may approve, return for correction or reject; returned items retain history and can be resubmitted. On approval perform the module-owned final action atomically, publish the resulting domain event after commit and expose terminal status. Failed validations leave no partial financial effect. Define cancellation, amendment and reversal rules before implementation; posted financial events are never silently edited/deleted.
+## 3. Actors and responsibilities
+External Integration Gateway. Operators prepare and maintain records; authorized reviewers decide; administrators maintain module configuration; auditors have scoped read-only access. Consumers access only documented services/views.
 
-## D. Database ownership
-Candidate owned table groups: integration_connections, messages, webhooks, delivery_attempts. Use stable primary keys, timestamps and explicit statuses; document FKs, indexes for organization/status/date and unique business/reference/idempotency keys. Foreign references to other domains do not confer ownership. Monetary columns use DECIMAL. Preserve audit/posted history; no cascading deletion of financial records. Final entities, key type, constraints and retention need schema review.
+## 4. Permissions and access restrictions
+Permissions: module.view, create, update_draft, submit, review, approve, return, reject, administer, export. Apply least privilege and organizational/project/fund scopes on every record. Maker-checker separation for consequential operations; sensitive fields require explicit grants.
 
-## E. Backend architecture
-Laravel route/controller adapters, Form Requests, owned Eloquent models, domain service/actions, Policies/Gates, API Resources and domain events. Add listeners/jobs/scheduled tasks only for real asynchronous or timed behavior. Keep controllers thin, transaction boundaries explicit, and cross-module calls behind contracts. Do not invent filenames or namespaces before inspecting repository conventions.
+## 5. Module-specific business rules
+Mock until authorized specs; signature/replay validation; secrets never returned. Validate references against the owning module contract, uniqueness, scope and lifecycle state. Keep unverified law and approval thresholds configurable and unresolved. Monetary values use DECIMAL and decimal-safe arithmetic.
 
-## F. Frontend architecture
-Provide list/search/filter and detail views; create/edit draft form; lifecycle/approval queue where applicable; history/evidence panel and domain dashboard summaries. Use established shell and component library, strict TypeScript, accessible validation/loading/empty/error states and working actions. Suggested route family: /[module], /[module]/:id, /[module]/new; adapt to app routing conventions.
+## 6. Detailed business workflows
+Register adapter contract/credentials reference → test connection → accept signed/replay-safe request → normalize/enqueue → retry with backoff → reconcile outcome/dead-letter; domain owner decides transaction result.
+Start only with valid references and an authorized actor. Validate before state changes; record actor, timestamp, reason and correlation ID. Return requires reason and preserves prior decisions. Rejection is terminal unless approved reopen policy exists. Finalization is atomic; reconcile uncertain external results before retry.
 
-## G. API specification
-Conceptual versioned family: GET /[resources], POST /[resources], GET /[resources]/{id}, PATCH /[resources]/{id}; explicit POST command routes for submit/approve/return/reject and module-specific finalization. Paginate/filter allowlisted fields. Authenticate with Sanctum or approved service identity; authorize every object and organizational scope. Form and domain validation; decimal-safe monetary serialization; standard errors; idempotency for sensitive commands. Publish OpenAPI contract after decisions.
+## 7. State transitions and lifecycle rules
+Use domain-specific transitions, not a generic status mutation endpoint. Preserve snapshots and decision history. Posted accounting records are immutable and corrected only by linked authorized reversal/adjustment. Closed periods reject financial posting. Other lifecycle statuses are defined by the workflow above and owner policy.
 
-## H. Permissions and security
-Define module.view/create/update_draft/submit/approve/reject/administer/export permissions and least-privilege scope. Separate maker and approver; forbid self-approval where relevant. Enforce organization and record scope server-side. Mask/restrict sensitive data; protect uploads/downloads; log privileged changes through canonical audit service. Approval limits remain configurable and await validated authority.
+## 8. Database ownership and entity relationships
+Candidate entities: integration_connections, messages, webhooks, attempts, incidents.. Use stable primary keys, timestamps, actor/status/effective dates as appropriate, scoped/date indexes, and unique business/idempotency constraints. Foreign keys remain within this domain; cross-domain references use stable owner IDs/contracts. DECIMAL for monetary fields; do not cascade-delete financial/audit evidence.
 
-## I. Integration dependencies
-Depends on: Depends on foundation, IAM and audit contracts. Domain modules own their transactions; gateway transports messages and records delivery state. Consuming modules must be confirmed in the cross-module map. Consume only published contracts/events; publish a versioned event after committed state change with event ID, schema version, entity ID, timestamp, actor/scope references, correlation/causation IDs and minimal payload. Common events include lifecycle approved/completed; choose exact names and fields with consumers. External systems remain mock adapters absent specifications/credentials/authorization.
+## 9. Backend responsibilities
+Laravel controllers adapt HTTP; Form Requests validate inputs; Eloquent models represent owned entities; services/actions enforce invariants and transaction boundaries; Policies/Gates authorize; Resources define response contracts; Events publish committed facts through outbox; listeners/jobs handle async/retry/scheduled work. Use DB transactions and row locks for concurrency-sensitive operations.
 
-## J. Testing and acceptance criteria
-Unit-test rules and state transitions; feature-test endpoints, validation and responses; integration-test dependencies/events; security-test scope, authorization, sensitive data and segregation; test financial invariants/concurrency/idempotency when applicable. Complete when the scoped workflow works end-to-end, ownership and access controls hold, documented contracts are honored, UI actions work, migration/API docs match behavior and relevant regression checks pass.
+## 10. API contracts and endpoint responsibilities
+/api/v1/integrations; /webhooks/{adapter}.
+- GET /api/v1/integrations: scoped paginated list; module.view; validate allowlisted filters and pagination.
+- POST /api/v1/integrations: create domain record; module.create; validate required fields and owner references.
+- GET /api/v1/integrations/{id}: authorized detail and lifecycle metadata.
+- PATCH /api/v1/integrations/{id}: update mutable draft fields; module.update_draft; reject immutable states.
+- POST /api/v1/integrations/{id}/actions/{action}: explicit domain command; distinct permission, current-state/scope/reason validation and idempotency for sensitive operations.
+Use /api/v1, Sanctum or approved service identity, stable resource IDs, UTC timestamps and decimal-safe serialization. Return consistent 401/403/404/409/422 errors; never expose stack traces or secrets.
 
-## Decisions and constraints
-Do not hardcode legal or financial thresholds. Use fictional seed data; do not claim official government affiliation or integrations. Use MySQL 8 and project-approved migration conventions. Preserve existing repository changes and document unresolved decisions rather than fabricating policy.
+## 11. Frontend responsibilities
+React/TypeScript dashboard/list, detail/history/evidence, draft form, work queue and module-specific exception/reconciliation pages. Tables use scoped filters/pagination; forms show server errors; irreversible actions confirm. Tailwind/shadcn and typed API client; accessible loading/empty/error states, working controls, no frontend-only security.
 
+## 12. Cross-module dependencies and integration events
+Transports domain contracts, never owns domain transactions. Only this module writes its records. Domain events publish after commit through outbox with event_id, type/version, occurred_at UTC, producer, entity ID, correlation/causation IDs and minimal payload. Consumers dedupe and retry safely. External adapters remain mocked until specifications, credentials and authorization are approved.
 
-## Detailed module specification
+## 13. Security and audit requirements
+Enforce authentication, Policies/Gates, record/org scope, least privilege and maker-checker server-side. Protect sensitive data and private files. Log privileged actions, approvals, overrides, reversals and imports through canonical audit infrastructure. Preserve immutable audit evidence; do not create competing audit ledgers.
 
-### Purpose and boundary
-External Integration Gateway Own only the records listed here: Mock until authorized specs; signature/replay validation; secrets never returned.. Cross-domain data is referenced by owner ID.
+## 14. Testing requirements
+Unit-test rules, calculations and transitions; feature-test endpoints, authorization and scope; integration-test dependency contracts, events/outbox/retries; security-test IDOR, privilege escalation and data leakage. Financial modules additionally test DECIMAL, rollback, row locks/concurrency, overspend, balanced journals, duplicate payments, idempotency, reconciliation and period locks.
 
-### Functional requirements and actors
-Operators manage drafts and lifecycle actions; designated reviewers approve, return or reject; administrators configure domain reference data; auditors receive scoped read-only access. Functions include: External Integration Gateway
+## 15. Acceptance criteria
+All scoped use cases work end-to-end; invalid/out-of-scope actions fail; data ownership is respected; API/UI reflect lifecycle; events are retry-safe; audit is complete; applicable financial invariants hold; tests pass; documentation matches behavior; unresolved policy is not silently assumed.
 
-### Business rules and state
-Adapters, credentials refs, webhook ingress, retries, monitoring and transport audit. Lifecycle: draft → submitted → under_review → approved/returned/rejected → completed. Return requires a reason and preserves history. Finalization is atomic. Posted accounting effects require reversal, never silent edit.
+## 16. Unresolved business decisions
+Confirm roles, approval limits, legal/accounting rules, retention, classification and integration authority with accountable owners. No government affiliation or official integration is claimed.
 
-### Data relationships
-Candidate owned tables: Mock until authorized specs; signature/replay validation; secrets never returned.. Index scope/status/business date; enforce unique natural/reference and idempotency keys. Reference org/user/financial IDs through their owning modules. Use DECIMAL for every amount and no cascading deletion of financial evidence.
-
-### Backend and frontend
-Backend: Laravel route/controller, Form Requests, domain models/services/actions, Policies/Gates, Resources, events and queue jobs where needed. Frontend: React/TypeScript list, detail, create/edit, filter and lifecycle queue at /integration-and-external-system-gateway; accessible error/loading/empty states and functioning actions.
-
-### API contract and permissions
-integration_connections, messages, webhooks, attempts, incidents. All endpoints use /api/v1, authenticate, authorize record and organization scope, validate transitions, paginate/filter lists and return stable resource IDs. Explicit POST lifecycle commands; no generic status patch. Permissions are module.view/create/update/submit/approve/administer/export; maker and approver separated.
-
-### Dependencies, audit and security
-/api/v1/integrations; /webhooks/{adapter}. Use documented contracts and outbox events; envelope carries event ID/type/version, time, entity and correlation IDs with minimal payload. Consumers are idempotent. Protect sensitive fields/files; log privileged actions using canonical audit infrastructure; server-side authorization is mandatory.
-
-### Test and acceptance conditions
-Unit-test rules/state transitions; feature-test API validation/authorization; integration-test dependencies/events/retries; security-test scope and leakage; financial domains test decimals, locking, idempotency, duplicate prevention and reconciliation. Complete when workflows, ownership, permission boundaries, API/UI, audit, tests and docs meet these requirements.
-
-### Unresolved decisions
-Confirm county roles, retention, thresholds, statutory or accounting requirements and integration authorization with owners. Use fictional data; no official affiliation or live integration is implied.
-
+## Implementation notes
+This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

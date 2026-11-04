@@ -4,7 +4,7 @@ Act as the implementation team for FinCore County, a modular-monolith county pub
 
 ## Module objective and boundary
 
-Own application configuration, API versioning, global settings, reference number generation, financial year configuration, system parameters, logging infrastructure, error handling, shared utilities, and health monitoring.
+Own application configuration, API versioning, global settings, reference number generation, generic system parameters, logging infrastructure, error handling, shared utilities, and health monitoring. Module 05 owns canonical financial years and periods.
 
 Dependencies and consumers: All modules depend on stable configuration and shared platform contracts. Establish versioning, settings and sequence contracts without absorbing domain transactions.
 
@@ -58,4 +58,3 @@ Run relevant existing checks for affected backend/frontend areas, migrations and
 - Secure every endpoint on the server; frontend visibility is not authorization.
 - Avoid circular dependencies and speculative placeholder implementations.
 - Before editing, state a concise inspection summary and proposed scoped changes. Then implement this module only and report changed files, verification, risks and open decisions.
-*** End Patch

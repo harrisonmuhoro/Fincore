@@ -4,7 +4,7 @@ Act as the implementation team for FinCore County, a modular-monolith county pub
 
 ## Module objective and boundary
 
-Own configurable county structures: departments, directorates, sub-counties, wards, cost centres, programmes, projects, hierarchy, and reporting structures.
+Own configurable county structures: departments, directorates, sub-counties, wards, cost centres, programmes, and project identity/classification, hierarchy, and reporting structures. Module 17 owns project delivery lifecycle, milestones, progress, certificates, and performance.
 
 Dependencies and consumers: Depends on foundation. IAM, budgeting, procurement, revenue, assets, projects, grants, payroll integration, and reporting consume organization identifiers.
 
@@ -58,4 +58,3 @@ Run relevant existing checks for affected backend/frontend areas, migrations and
 - Secure every endpoint on the server; frontend visibility is not authorization.
 - Avoid circular dependencies and speculative placeholder implementations.
 - Before editing, state a concise inspection summary and proposed scoped changes. Then implement this module only and report changed files, verification, risks and open decisions.
-*** End Patch

@@ -4,7 +4,7 @@ Act as the implementation team for FinCore County, a modular-monolith county pub
 
 ## Module objective and boundary
 
-Own county development projects, project budgets, contractors, milestones, progress, certificates, expenditure views and performance reports.
+Own development project delivery lifecycle, milestones, progress, certificates, contractor references, and performance reports. Module 03 owns project identity/classification; modules 06/07 own budget and commitment transactions; module 13 owns posted accounting.
 
 Dependencies and consumers: Depends on organization/project references, budget, procurement, contracts, documents, workflow and IAM. Budget and ledger remain authoritative for their financial transactions.
 
@@ -58,4 +58,3 @@ Run relevant existing checks for affected backend/frontend areas, migrations and
 - Secure every endpoint on the server; frontend visibility is not authorization.
 - Avoid circular dependencies and speculative placeholder implementations.
 - Before editing, state a concise inspection summary and proposed scoped changes. Then implement this module only and report changed files, verification, risks and open decisions.
-*** End Patch

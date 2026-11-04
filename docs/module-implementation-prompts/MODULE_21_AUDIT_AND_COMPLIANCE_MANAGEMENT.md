@@ -58,4 +58,3 @@ Run relevant existing checks for affected backend/frontend areas, migrations and
 - Secure every endpoint on the server; frontend visibility is not authorization.
 - Avoid circular dependencies and speculative placeholder implementations.
 - Before editing, state a concise inspection summary and proposed scoped changes. Then implement this module only and report changed files, verification, risks and open decisions.
-*** End Patch
