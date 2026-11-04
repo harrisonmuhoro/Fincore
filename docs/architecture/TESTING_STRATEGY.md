@@ -1,0 +1,3 @@
+# Testing Strategy
+
+Layers: domain/unit rules and lifecycle; API/feature validation, auth, scopes and response contracts; database migrations/constraints/transactions/locks; module events/outbox; frontend forms and accessible states; security (IDOR, privilege escalation, data leaks, uploads, replay); financial integrity (DECIMAL, balance, concurrent overspend, idempotency, duplicate payment, reversal and close lock). Use fictional isolated fixtures and deterministic clocks. Validate MySQL-specific behavior on MySQL 8. CI should run focused tests, static/lint checks and frontend build; release gates add full regression, API compatibility, security, migration review and backup/restore readiness. Report only checks actually run.
