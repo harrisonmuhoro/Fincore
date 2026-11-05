@@ -137,7 +137,7 @@ return new class extends Migration
             $table->string('evidence_reference', 255)->nullable();
             $table->string('request_id', 100)->nullable();
             $table->timestamp('transitioned_at');
-            $table->index(['accounting_period_id', 'transitioned_at']);
+            $table->index(['accounting_period_id', 'transitioned_at'], 'period_history_period_time_idx');
         });
     }
 

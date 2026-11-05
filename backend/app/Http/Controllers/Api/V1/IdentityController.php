@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class IdentityController extends Controller
 {
@@ -98,6 +99,13 @@ class IdentityController extends Controller
             'reason' => $reason,
             'ip_address' => $request->ip(),
             'request_id' => $request->attributes->get('request_id'),
+            'occurred_at' => now(),
+        ]);
+        DB::table('security_events')->insert([
+            'event_key' => (string) Str::uuid(), 'category' => 'authentication',
+            'severity' => $outcome === 'denied' ? 'warning' : 'info', 'actor_id' => $request->user()?->id,
+            'subject_user_id' => $user?->id, 'request_id' => $request->attributes->get('request_id'),
+            'ip_address' => $request->ip(), 'details' => json_encode(['action' => $action, 'outcome' => $outcome], JSON_THROW_ON_ERROR),
             'occurred_at' => now(),
         ]);
     }

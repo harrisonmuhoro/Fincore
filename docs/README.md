@@ -58,3 +58,4 @@ Laravel/PHP 8.3+, Sanctum REST, React/TypeScript/Vite, Tailwind/shadcn, MySQL 8 
 
 ## Implementation records
 - [Phase 1 foundation implementation, APIs, bootstrap and limitations](architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md)
+- [Phase 2 shared controls, APIs, storage security and limitations](architecture/PHASE_2_SHARED_CONTROLS_IMPLEMENTATION.md)

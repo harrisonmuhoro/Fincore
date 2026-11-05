@@ -1,6 +1,6 @@
 # FinCore County
 
-FinCore County is a modular county public financial management platform foundation. It is not affiliated with or connected to an official county or government system. The repository contains a Laravel API and React/TypeScript application. Modules 01–05 provide platform identity, organization, workflow and financial master-data foundations; transaction processing is not implemented.
+FinCore County is a modular county public financial management platform foundation. It is not affiliated with or connected to an official county or government system. The repository contains a Laravel API and React/TypeScript application. Modules 01–05 provide platform identity, organization, workflow and financial master-data foundations; Phase 2 adds shared document, notification and security-monitoring controls. Transaction processing is not implemented.
 
 ## Technology
 
@@ -15,6 +15,7 @@ FinCore County is a modular county public financial management platform foundati
 - [Architecture and module documentation](docs/README.md)
 - [13 architecture specifications](docs/architecture/)
 - [Phase 1 foundation implementation record](docs/architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md)
+- [Phase 2 shared controls implementation record](docs/architecture/PHASE_2_SHARED_CONTROLS_IMPLEMENTATION.md)
 - [26 module specifications](docs/modules/)
 - [Existing module implementation prompts](docs/module-implementation-prompts/README.md)
 - [Decision log](docs/decisions/README.md)

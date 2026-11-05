@@ -52,4 +52,4 @@ Seeding registers the Module 01–05 permission vocabulary, baseline one-step wo
 
 ## Verification record
 
-The SQLite in-memory migration and seed cycle completed successfully. PHP syntax checking passed for 83 PHP files, and the TOTP implementation matched the RFC 6238 SHA-1 test vector. Route discovery registered 51 API routes. PHPUnit execution is blocked in this checkout because PHP reports the Composer bootstrap as unreadable; MySQL integration is blocked by sandbox loopback socket restrictions. See the delivery report for the exact check outcomes.
+The current regression run covers this foundation together with Phase 2: SQLite in-memory `migrate:fresh --seed` passed; API route discovery registered 84 routes; PHPUnit reported 26 tests, 24 passed and 2 environment-dependent skips. The frontend suite reported 9 passing tests, and TypeScript typecheck, Oxlint, production build and Laravel Pint passed. The historical TOTP RFC 6238 vector check also passed. MySQL-specific locking and integration were not verified against the configured local MySQL service in this run.

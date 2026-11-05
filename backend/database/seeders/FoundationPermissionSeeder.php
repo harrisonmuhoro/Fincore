@@ -16,6 +16,9 @@ class FoundationPermissionSeeder extends Seeder
             'org.unit.propose', 'org.unit.edit_draft', 'org.restructure.submit', 'org.restructure.approve', 'org.leadership.assign', 'org.cost_centre.manage', 'org.history.export', 'org.unit.view', 'org.unit.update_draft',
             'workflow.definition.create', 'workflow.definition.publish', 'workflow.instance.assign', 'workflow.instance.delegate', 'workflow.instance.approve', 'workflow.instance.return', 'workflow.instance.reject', 'workflow.instance.cancel', 'workflow.instance.escalate', 'workflow.workflow_instance.view', 'workflow.workflow_instance.update_draft',
             'finance.coa.view', 'finance.coa.edit', 'finance.account_combination.validate', 'finance.account_combination.activate', 'finance.master_data.activate', 'finance.financial_year.view', 'finance.accounting_period.view', 'finance.financial_year.create', 'finance.financial_year.activate', 'finance.accounting_period.open', 'finance.accounting_period.close', 'finance.accounting_period.reopen', 'finance.master_data.audit.view',
+            'records.document.upload', 'records.document.view', 'records.document.view_all', 'records.document.classify', 'records.document.scan_result', 'records.document.hold', 'records.document.download',
+            'notification.notification.view', 'notification.preference.manage', 'notification.delivery.view', 'notification.delivery.retry', 'notification.announcement.create', 'notification.announcement.publish',
+            'security.event.view', 'security.incident.view', 'security.alert.triage', 'security.incident.assign', 'security.incident.investigate', 'security.incident.contain', 'security.incident.resolve', 'security.incident.close', 'security.monitoring.view', 'security.monitoring.record',
         ];
 
         foreach ($permissions as $code) {

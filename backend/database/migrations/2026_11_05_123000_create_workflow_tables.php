@@ -69,7 +69,7 @@ return new class extends Migration
             $table->string('status', 20)->default('active');
             $table->text('reason');
             $table->timestamps();
-            $table->index(['delegator_id', 'status', 'effective_from', 'effective_to']);
+            $table->index(['delegator_id', 'status', 'effective_from', 'effective_to'], 'workflow_delegations_actor_time_idx');
         });
     }
 

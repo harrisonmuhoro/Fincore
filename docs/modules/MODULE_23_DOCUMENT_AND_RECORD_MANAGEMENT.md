@@ -79,5 +79,9 @@ Malware, invalid MIME, oversize file or unauthorized link blocks upload/download
 ## Reporting and operational visibility
 Storage/classification, version history, retention dates/holds, access/download history and quarantined file queue.
 
+## Phase 2 delivery status
+
+Private local storage, owner-scoped document listing, metadata classification, immutable binary version uploads, cross-module stable-ID links, access-event history, legal-hold flagging, upload hash/MIME/size capture and fail-closed download authorization are implemented. Uploads and new versions begin quarantined; only a user with `records.document.scan_result` can record a scanner result, and only `clean` permits download. The endpoint records the scanner name and evidence supplied by that authorized operator; it is not an antivirus engine. No scanner provider or production deployment configuration was supplied. Approved retention disposition/deletion is deferred; no disposition route exists, so legal holds and unresolved retention policy cannot be bypassed through this API.
+
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

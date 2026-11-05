@@ -17,3 +17,7 @@ Inbound webhook: authenticate/signature and timestamp, validate schema and size,
 
 ## Failure, reconciliation and monitoring
 Classify retryable transport failure vs permanent validation rejection vs ambiguous business outcome. Retry only safe/idempotent operations; otherwise queue for operator reconciliation. Dead-letter records include reason and correlation IDs, not secrets. Dashboards show backlog, age, retries, error class and adapter health. Rotate credentials, redact logs and monitor webhook replay attempts.
+
+## Current Phase 2 notification consumer
+
+`notifications:consume-domain-events` consumes only `ApprovalCompleted` outbox events, resolves the workflow requester's ID from the workflow owner, and creates an idempotent user notification. It records a module-owned receipt and does not mark the shared outbox event as externally published. Email delivery is queued only when the recipient enables that channel. Other event subscriptions, general outbox publication, retries/dead-letter operations, and consumer projections remain Module 25/shared-platform work.

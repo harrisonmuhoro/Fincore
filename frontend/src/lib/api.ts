@@ -41,11 +41,11 @@ async function apiRequest<T>(path: string, method: string, payload?: unknown, si
     headers: {
       Accept: 'application/json',
       'X-Request-ID': crypto.randomUUID(),
-      ...(payload ? { 'Content-Type': 'application/json' } : {}),
+      ...(payload && !(payload instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    ...(payload ? { body: JSON.stringify(payload) } : {}),
+    ...(payload ? { body: payload instanceof FormData ? payload : JSON.stringify(payload) } : {}),
     ...(signal ? { signal } : {}),
   })
 
@@ -73,4 +73,8 @@ export function apiPost<T>(path: string, payload?: unknown): Promise<ApiEnvelope
 
 export function apiPatch<T>(path: string, payload: unknown): Promise<ApiEnvelope<T>> {
   return apiRequest<T>(path, 'PATCH', payload)
+}
+
+export function apiPut<T>(path: string, payload: unknown): Promise<ApiEnvelope<T>> {
+  return apiRequest<T>(path, 'PUT', payload)
 }

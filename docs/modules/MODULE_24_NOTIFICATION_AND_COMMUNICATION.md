@@ -76,5 +76,9 @@ Provider failure is retried with deduplication; permanent failure enters dead-le
 ## Reporting and operational visibility
 Delivery success/failure by channel/template, retry queue, user preference coverage and announcement history.
 
+## Phase 2 delivery status
+
+Recipient-only in-app inbox/read state, versioned per-category in-app/email preferences, independent-author publication for announcements, queued announcement fan-out, and idempotent `ApprovalCompleted` consumption are implemented. Email uses Laravel's queue and configured mail transport. `notifications:consume-domain-events` must be scheduled/run by operations; a scheduler entry has not been enabled automatically. Provider delivery receipts, template administration, general event subscriptions, bounded retry/dead-letter reporting, and queue dashboards remain deferred to the integration/operations phase. Notification state never changes workflow or financial state.
+
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.

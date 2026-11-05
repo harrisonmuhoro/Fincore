@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\IdentityAdminController;
 use App\Http\Controllers\Api\V1\IdentityController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationReferenceController;
+use App\Http\Controllers\Api\V1\SharedControlsController;
 use App\Http\Controllers\Api\V1\SystemSettingsController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Http\Request;
@@ -20,6 +21,27 @@ Route::post('/auth/activate', [IdentityAdminController::class, 'activate'])->mid
 
 Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
     Route::post('/auth/logout', [IdentityController::class, 'logout'])->name('api.auth.logout');
+    Route::get('/documents', [SharedControlsController::class, 'documents'])->middleware('permission:records.document.view')->name('api.documents.index');
+    Route::post('/documents', [SharedControlsController::class, 'uploadDocument'])->middleware('permission:records.document.upload')->name('api.documents.store');
+    Route::get('/documents/{document}', [SharedControlsController::class, 'document'])->middleware('permission:records.document.view')->name('api.documents.show');
+    Route::post('/documents/{document}/versions', [SharedControlsController::class, 'uploadDocumentVersion'])->middleware('permission:records.document.upload')->name('api.documents.versions.store');
+    Route::patch('/documents/{document}', [SharedControlsController::class, 'classifyDocument'])->middleware('permission:records.document.classify')->name('api.documents.classify');
+    Route::post('/documents/{document}/scan-result', [SharedControlsController::class, 'scanResult'])->middleware('permission:records.document.scan_result')->name('api.documents.scan-result');
+    Route::post('/documents/{document}/hold', [SharedControlsController::class, 'setDocumentHold'])->middleware('permission:records.document.hold')->name('api.documents.hold');
+    Route::get('/documents/{document}/download', [SharedControlsController::class, 'downloadDocument'])->middleware('permission:records.document.download')->name('api.documents.download');
+    Route::get('/notifications', [SharedControlsController::class, 'notifications'])->middleware('permission:notification.notification.view')->name('api.notifications.index');
+    Route::post('/notifications/{notification}/read', [SharedControlsController::class, 'markNotificationRead'])->middleware('permission:notification.notification.view')->name('api.notifications.read');
+    Route::get('/notification-preferences', [SharedControlsController::class, 'preferences'])->middleware('permission:notification.notification.view')->name('api.notification-preferences.index');
+    Route::put('/notification-preferences', [SharedControlsController::class, 'updatePreference'])->middleware('permission:notification.preference.manage')->name('api.notification-preferences.update');
+    Route::get('/announcements', [SharedControlsController::class, 'announcements'])->middleware('permission:notification.notification.view')->name('api.announcements.index');
+    Route::post('/announcements', [SharedControlsController::class, 'createAnnouncement'])->middleware('permission:notification.announcement.create')->name('api.announcements.store');
+    Route::post('/announcements/{announcement}/publish', [SharedControlsController::class, 'publishAnnouncement'])->middleware('permission:notification.announcement.publish')->name('api.announcements.publish');
+    Route::get('/security/events', [SharedControlsController::class, 'securityEvents'])->middleware('permission:security.event.view')->name('api.security.events.index');
+    Route::get('/security/monitoring-snapshots', [SharedControlsController::class, 'monitoringSnapshots'])->middleware('permission:security.monitoring.view')->name('api.security.monitoring.index');
+    Route::post('/security/monitoring-snapshots', [SharedControlsController::class, 'recordMonitoringSnapshot'])->middleware('permission:security.monitoring.record')->name('api.security.monitoring.store');
+    Route::get('/security/incidents', [SharedControlsController::class, 'securityIncidents'])->middleware('permission:security.incident.view')->name('api.security.incidents.index');
+    Route::post('/security/incidents', [SharedControlsController::class, 'createSecurityIncident'])->middleware('permission:security.alert.triage')->name('api.security.incidents.store');
+    Route::post('/security/incidents/{incident}/transition', [SharedControlsController::class, 'transitionSecurityIncident'])->middleware('permission:security.incident.investigate')->name('api.security.incidents.transition');
     Route::get('/user', function (Request $request) {
         return response()->json([
             'success' => true,

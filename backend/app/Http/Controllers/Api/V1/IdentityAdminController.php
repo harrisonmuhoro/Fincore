@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class IdentityAdminController extends Controller
@@ -212,6 +213,12 @@ class IdentityAdminController extends Controller
             'actor_id' => $request->user()->id, 'subject_user_id' => $subject->id, 'action' => $action,
             'outcome' => 'success', 'reason' => $reason, 'ip_address' => $request->ip(),
             'request_id' => $request->attributes->get('request_id'), 'occurred_at' => now(),
+        ]);
+        DB::table('security_events')->insert([
+            'event_key' => (string) Str::uuid(), 'category' => 'privileged_action', 'severity' => 'info',
+            'actor_id' => $request->user()->id, 'subject_user_id' => $subject->id,
+            'request_id' => $request->attributes->get('request_id'), 'ip_address' => $request->ip(),
+            'details' => json_encode(['action' => $action], JSON_THROW_ON_ERROR), 'occurred_at' => now(),
         ]);
     }
 }
