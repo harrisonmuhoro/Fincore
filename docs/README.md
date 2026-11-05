@@ -1,6 +1,6 @@
 # FinCore County Documentation Index
 
-FinCore County is a proposed county public financial management platform inspired by common IFMIS capabilities. It makes no claim of official government ownership or integration. No application features are implemented.
+FinCore County is a proposed county public financial management platform inspired by common IFMIS capabilities. It makes no claim of official government ownership or integration. Phase 0 provides the application foundation; business modules and financial transactions are not implemented.
 
 ## Architecture documents
 - [SYSTEM_OVERVIEW](architecture/SYSTEM_OVERVIEW.md)

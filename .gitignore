@@ -1,0 +1,28 @@
+# Environment secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# PHP / Laravel generated files
+/backend/vendor/
+/backend/storage/*.key
+/backend/storage/framework/cache/data/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*.log
+/backend/bootstrap/cache/*.php
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache
+
+# Node / Vite generated files
+/frontend/node_modules/
+/frontend/dist/
+/frontend/coverage/
+/frontend/.vite/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
