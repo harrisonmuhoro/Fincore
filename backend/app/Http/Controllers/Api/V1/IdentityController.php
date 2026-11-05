@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\MfaCodeRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class IdentityController extends Controller
@@ -49,6 +50,7 @@ class IdentityController extends Controller
 
         $secret = $totp->generateSecret();
         $user->forceFill(['mfa_secret' => $secret, 'mfa_confirmed_at' => null])->save();
+        $this->audit($request, $user, 'mfa.setup.started', 'success', 'Authenticator enrollment initiated.');
 
         return response()->json([
             'success' => true,
@@ -64,7 +66,7 @@ class IdentityController extends Controller
         abort_unless($user && $user->mfa_secret && $totp->verify($user->mfa_secret, $request->string('code')->toString()), 422, 'The MFA code is invalid.');
         $user->forceFill(['mfa_confirmed_at' => now(), 'status' => 'active'])->save();
         $request->user()->currentAccessToken()?->forceFill(['abilities' => ['*']])->save();
-        $this->audit($request, $user, 'mfa.enrolled', 'success');
+        $this->audit($request, $user, 'mfa.enrolled', 'success', 'Authenticator confirmation completed.');
 
         return response()->json(['success' => true, 'message' => 'MFA enrollment confirmed.', 'data' => ['mfa_enabled' => true], 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
@@ -86,13 +88,14 @@ class IdentityController extends Controller
         $this->audit($request, $user, 'login', 'denied');
     }
 
-    private function audit(Request $request, ?User $user, string $action, string $outcome): void
+    private function audit(Request $request, ?User $user, string $action, string $outcome, ?string $reason = null): void
     {
-        \Illuminate\Support\Facades\DB::table('iam_access_audits')->insert([
+        DB::table('iam_access_audits')->insert([
             'actor_id' => $request->user()?->id,
             'subject_user_id' => $user?->id,
             'action' => $action,
             'outcome' => $outcome,
+            'reason' => $reason,
             'ip_address' => $request->ip(),
             'request_id' => $request->attributes->get('request_id'),
             'occurred_at' => now(),

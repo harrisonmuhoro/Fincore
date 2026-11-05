@@ -4,6 +4,7 @@ import { AppLayout } from './layouts/AppLayout'
 import { ActivateAccountPage } from './pages/ActivateAccountPage'
 import { FinancialWorkspacePage } from './pages/FinancialWorkspacePage'
 import { HomePage } from './pages/HomePage'
+import { IdentityAdminPage } from './pages/IdentityAdminPage'
 import { MfaSetupPage } from './pages/MfaSetupPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { OrganizationPage } from './pages/OrganizationPage'
@@ -27,6 +28,7 @@ export function App() {
         <Route path="activate-account" element={<ActivateAccountPage />} />
         <Route path="mfa-setup" element={<MfaSetupPage />} />
         <Route path="system-settings" element={<PrivatePage><SettingsPage /></PrivatePage>} />
+        <Route path="identity" element={<PrivatePage><IdentityAdminPage /></PrivatePage>} />
         <Route path="organization" element={<PrivatePage><OrganizationPage /></PrivatePage>} />
         <Route path="workflows" element={<PrivatePage><WorkflowPage /></PrivatePage>} />
         <Route path="finance" element={<PrivatePage><FinancialWorkspacePage /></PrivatePage>} />

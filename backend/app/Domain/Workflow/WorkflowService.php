@@ -3,10 +3,10 @@
 namespace App\Domain\Workflow;
 
 use App\Domain\Shared\OutboxPublisher;
-use App\Models\WorkflowDefinition;
-use App\Models\WorkflowDecision;
-use App\Models\WorkflowInstance;
 use App\Models\User;
+use App\Models\WorkflowDecision;
+use App\Models\WorkflowDefinition;
+use App\Models\WorkflowInstance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -51,6 +51,9 @@ class WorkflowService
             }
             if ($locked->requested_by === $actorId) {
                 abort(403, 'The requester cannot approve their own submission.');
+            }
+            if ($locked->subject_type === 'iam_role_assignment' && (int) ($locked->context['user_id'] ?? 0) === $actorId) {
+                abort(403, 'The beneficiary cannot approve their own role assignment.');
             }
             $step = $locked->definition->steps()->where('step_order', $locked->current_step)->firstOrFail();
             $permission = $step->approver_reference;

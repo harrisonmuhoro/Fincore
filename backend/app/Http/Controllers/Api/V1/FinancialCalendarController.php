@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WorkflowInstance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FinancialCalendarController extends Controller
@@ -46,6 +47,7 @@ class FinancialCalendarController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $data): JsonResponse {
+            DB::table('financial_calendars')->where('id', $data['calendar_id'])->lockForUpdate()->firstOrFail();
             $overlap = DB::table('financial_years')->where('calendar_id', $data['calendar_id'])
                 ->where('starts_on', '<=', $data['ends_on'])->where('ends_on', '>=', $data['starts_on'])->exists();
             abort_if($overlap, 409, 'Financial year dates overlap an existing year in this calendar.');
@@ -56,7 +58,7 @@ class FinancialCalendarController extends Controller
                 abort_if($period['starts_on'] < $data['starts_on'] || $period['ends_on'] > $data['ends_on'], 422, 'Periods must fall inside their financial year.');
                 abort_if($lastEnd !== null && $period['starts_on'] <= $lastEnd, 422, 'Financial periods must not overlap.');
                 if ($lastEnd !== null) {
-                    abort_if($period['starts_on'] !== \Illuminate\Support\Carbon::parse($lastEnd)->addDay()->toDateString(), 422, 'Financial periods must cover the year without date gaps.');
+                    abort_if($period['starts_on'] !== Carbon::parse($lastEnd)->addDay()->toDateString(), 422, 'Financial periods must cover the year without date gaps.');
                 } else {
                     abort_if($period['starts_on'] !== $data['starts_on'], 422, 'The first period must begin on the financial year start date.');
                 }
@@ -82,6 +84,15 @@ class FinancialCalendarController extends Controller
     {
         return DB::transaction(function () use ($request, $year, $workflows, $outbox): JsonResponse {
             $record = DB::table('financial_years')->where('id', $year)->lockForUpdate()->firstOrFail();
+            if ($record->approval_workflow_id) {
+                $previous = WorkflowInstance::query()->findOrFail($record->approval_workflow_id);
+                if (in_array($previous->status, ['rejected', 'returned'], true)) {
+                    DB::table('financial_years')->where('id', $year)->update(['approval_workflow_id' => null, 'updated_at' => now()]);
+                    $record->approval_workflow_id = null;
+                } elseif ($previous->status !== 'approved') {
+                    abort(409, 'Year activation is still awaiting approval.');
+                }
+            }
             if (! $record->approval_workflow_id) {
                 $flow = $workflows->start('finance.financial_year.activate', 'financial_year', $year, $request->user()->id, [], $request->attributes->get('request_id'));
                 DB::table('financial_years')->where('id', $year)->update(['approval_workflow_id' => (string) $flow->id, 'updated_at' => now()]);
@@ -92,7 +103,7 @@ class FinancialCalendarController extends Controller
             abort_unless($flow->status === 'approved' && $flow->requested_by !== $request->user()->id, 403, 'Independent approved activation is required.');
             abort_if($record->status === 'active', 409);
             DB::table('financial_years')->where('id', $year)->update(['status' => 'active', 'version' => $record->version + 1, 'updated_at' => now()]);
-            $outbox->record('FinancialYearActivated', 'financial_master_data', 'financial_year', $year, ['version' => $record->version + 1], $request->attributes->get('request_id'));
+            $outbox->record('FinancialYearActivated', 'financial_master_data', 'financial_year', $year, ['version' => $record->version + 1, 'actor_id' => $request->user()->id], $request->attributes->get('request_id'));
 
             return $this->respond($request, 'Financial year activated.', DB::table('financial_years')->where('id', $year)->first());
         });
@@ -117,7 +128,7 @@ class FinancialCalendarController extends Controller
 
     public function reopenPeriod(Request $request, int $period, WorkflowService $workflows, OutboxPublisher $outbox): JsonResponse
     {
-        abort_unless($request->filled('reason'), 422, 'A reason is required to reopen a period.');
+        $request->validate(['reason' => ['required', 'string', 'min:8', 'max:500']]);
 
         return $this->transitionPeriod($request, $period, 'reopen', 'finance.accounting_period.reopen', $workflows, $outbox);
     }
@@ -127,6 +138,15 @@ class FinancialCalendarController extends Controller
         return DB::transaction(function () use ($request, $period, $action, $workflowCode, $workflows, $outbox): JsonResponse {
             $record = DB::table('accounting_periods')->where('id', $period)->lockForUpdate()->firstOrFail();
             $target = 'open';
+            if ($record->approval_workflow_id) {
+                $previous = WorkflowInstance::query()->findOrFail($record->approval_workflow_id);
+                if (in_array($previous->status, ['rejected', 'returned'], true)) {
+                    DB::table('accounting_periods')->where('id', $period)->update(['approval_workflow_id' => null, 'updated_at' => now()]);
+                    $record->approval_workflow_id = null;
+                } elseif ($previous->status !== 'approved') {
+                    abort(409, 'Period transition is still awaiting approval.');
+                }
+            }
             if (! $record->approval_workflow_id) {
                 $flow = $workflows->start($workflowCode, 'accounting_period', $period, $request->user()->id, ['reason' => $request->input('reason')], $request->attributes->get('request_id'));
                 DB::table('accounting_periods')->where('id', $period)->update(['approval_workflow_id' => (string) $flow->id, 'updated_at' => now()]);
@@ -150,7 +170,7 @@ class FinancialCalendarController extends Controller
                 'actor_id' => $request->user()->id, 'reason' => $reason, 'request_id' => $request->attributes->get('request_id'),
                 'transitioned_at' => now(),
             ]);
-            $outbox->record($event, 'financial_master_data', 'accounting_period', $period, ['from' => $record->status, 'to' => $target, 'reason' => $reason], $request->attributes->get('request_id'));
+            $outbox->record($event, 'financial_master_data', 'accounting_period', $period, ['from' => $record->status, 'to' => $target, 'reason' => $reason, 'actor_id' => $request->user()->id], $request->attributes->get('request_id'));
 
             return $this->respond($request, 'Accounting period status changed.', DB::table('accounting_periods')->where('id', $period)->first());
         });

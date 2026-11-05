@@ -1,4 +1,4 @@
-import { Banknote, CircleHelp, LayoutDashboard, Landmark, LogIn, LogOut, Settings, ShieldCheck, Users, Workflow } from 'lucide-react'
+import { Banknote, CircleHelp, LayoutDashboard, Landmark, LogIn, LogOut, Settings, ShieldCheck, UserCog, Users, Workflow } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { apiPost, clearAccessToken, hasAccessToken } from '../lib/api'
 
@@ -6,6 +6,7 @@ const navigation = [
   { label: 'Overview', to: '/', icon: LayoutDashboard },
   { label: 'System status', to: '/system-status', icon: ShieldCheck },
   { label: 'Organization', to: '/organization', icon: Users, private: true },
+  { label: 'Identity and roles', to: '/identity', icon: UserCog, private: true },
   { label: 'Workflow', to: '/workflows', icon: Workflow, private: true },
   { label: 'Financial setup', to: '/finance', icon: Landmark, private: true },
   { label: 'System settings', to: '/system-settings', icon: Settings, private: true },

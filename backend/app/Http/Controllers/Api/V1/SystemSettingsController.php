@@ -29,7 +29,9 @@ class SystemSettingsController extends Controller
         $actor = $request->user();
         $hasGlobal = $actor->hasPermission('system.settings.view');
         $scopes = $actor->roles()->wherePivot('status', 'active')->wherePivot('effective_from', '<=', now())
-            ->where(function ($query): void { $query->whereNull('iam_user_role_assignments.effective_to')->orWhere('iam_user_role_assignments.effective_to', '>', now()); })
+            ->where(function ($query): void {
+                $query->whereNull('iam_user_role_assignments.effective_to')->orWhere('iam_user_role_assignments.effective_to', '>', now());
+            })
             ->whereHas('permissions', fn ($query) => $query->where('code', 'system.settings.view'))
             ->get()->map(fn ($role) => [(string) $role->pivot->scope_type, (string) $role->pivot->scope_id])->unique()->values();
         abort_unless($hasGlobal || $scopes->isNotEmpty(), 403);
@@ -48,7 +50,8 @@ class SystemSettingsController extends Controller
         $settings = $settingsQuery->orderBy('setting_key')->paginate(min(max((int) $request->integer('per_page', 25), 1), 100));
         $settings->getCollection()->transform(fn (SystemSetting $setting) => [
             'key' => $setting->setting_key, 'scope_type' => $setting->scope_type, 'scope_id' => $setting->scope_id,
-            'value' => $setting->value_json, 'type' => $setting->value_type, 'version' => $setting->version,
+            'value' => preg_match('/(secret|password|passwd|token|credential|api[_-]?key)/i', $setting->setting_key) ? '[REDACTED]' : $setting->value_json,
+            'type' => $setting->value_type, 'version' => $setting->version,
             'effective_from' => $setting->effective_from,
         ]);
 

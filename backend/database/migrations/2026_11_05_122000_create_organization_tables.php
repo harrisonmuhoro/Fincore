@@ -44,6 +44,8 @@ return new class extends Migration
             $table->string('status', 20)->default('draft');
             $table->date('effective_from')->nullable();
             $table->date('effective_to')->nullable();
+            $table->string('approval_workflow_id', 120)->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
 
@@ -55,6 +57,8 @@ return new class extends Migration
             $table->string('status', 20)->default('draft');
             $table->date('effective_from')->nullable();
             $table->date('effective_to')->nullable();
+            $table->string('approval_workflow_id', 120)->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
 
@@ -67,6 +71,8 @@ return new class extends Migration
             $table->string('status', 20)->default('draft');
             $table->date('effective_from')->nullable();
             $table->date('effective_to')->nullable();
+            $table->string('approval_workflow_id', 120)->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
     }

@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -48,6 +49,7 @@ class User extends Authenticatable
                     ->orWhere('iam_user_role_assignments.effective_to', '>', now());
             })
             ->where('iam_user_role_assignments.status', 'active')
+            ->where('iam_roles.status', 'active')
             ->where(function ($query) use ($scopeType, $scopeId): void {
                 $query->where(function ($global): void {
                     $global->where('iam_user_role_assignments.scope_type', 'global')->where('iam_user_role_assignments.scope_id', 'global');
@@ -59,7 +61,7 @@ class User extends Authenticatable
             ->exists();
     }
 
-    public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'iam_user_role_assignments', 'user_id', 'role_id')
             ->withPivot(['scope_type', 'scope_id', 'effective_from', 'effective_to', 'status', 'approval_workflow_id']);

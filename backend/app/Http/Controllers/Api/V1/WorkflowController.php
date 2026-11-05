@@ -31,9 +31,12 @@ class WorkflowController extends Controller
                 return $actor->hasPermission('workflow.instance.escalate');
             }
             $step = $instance->definition->steps->firstWhere('step_order', $instance->current_step);
-            if (! $step || ! $step->approver_reference) return false;
+            if (! $step || ! $step->approver_reference) {
+                return false;
+            }
             $scopeType = $instance->context['scope_type'] ?? 'global';
             $scopeId = $instance->context['scope_id'] ?? 'global';
+
             return $actor->hasPermission($step->approver_reference, $scopeType, $scopeId)
                 || $service->mayApproveAsDelegate($actor->id, $step->approver_reference, $scopeType, $scopeId);
         })->map(fn (WorkflowInstance $instance) => [
@@ -77,7 +80,7 @@ class WorkflowController extends Controller
             $outbox->record('WorkflowDefinitionPublished', 'workflow', 'workflow_definition', $definition->id, ['code' => $definition->code, 'version' => $definition->version], $request->attributes->get('request_id'));
         });
 
-        return response()->json(['success' => true, 'message' => 'Workflow definition published.', 'data' => $definition->fresh()->load('steps'), 'meta' => ['request_id' => $request->attributes->get('request_id')] ]);
+        return response()->json(['success' => true, 'message' => 'Workflow definition published.', 'data' => $definition->fresh()->load('steps'), 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
 
     public function start(Request $request, WorkflowService $service): JsonResponse
@@ -102,10 +105,11 @@ class WorkflowController extends Controller
                 $mayApprove = $mayApprove && ($actor->hasPermission($actionPermission, $scopeType, $scopeId)
                     || $service->mayApproveAsDelegate($actor->id, $actionPermission, $scopeType, $scopeId));
             }
+
             return $mayApprove;
         }, $request->attributes->get('request_id'));
 
-        return response()->json(['success' => true, 'message' => 'Workflow decision recorded.', 'data' => $workflow, 'meta' => ['request_id' => $request->attributes->get('request_id')] ]);
+        return response()->json(['success' => true, 'message' => 'Workflow decision recorded.', 'data' => $workflow, 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
 
     public function delegate(Request $request, WorkflowService $service): JsonResponse
@@ -128,7 +132,7 @@ class WorkflowController extends Controller
         $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
         $result = $service->escalate($instance, $request->user()->id, $data['reason'], $request->attributes->get('request_id'));
 
-        return response()->json(['success' => true, 'message' => 'Workflow escalated.', 'data' => $result, 'meta' => ['request_id' => $request->attributes->get('request_id')] ]);
+        return response()->json(['success' => true, 'message' => 'Workflow escalated.', 'data' => $result, 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
 
     public function cancel(Request $request, WorkflowInstance $instance, WorkflowService $service): JsonResponse
@@ -137,6 +141,6 @@ class WorkflowController extends Controller
         $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
         $result = $service->cancel($instance, $request->user()->id, $data['reason'], $request->attributes->get('request_id'));
 
-        return response()->json(['success' => true, 'message' => 'Workflow cancelled.', 'data' => $result, 'meta' => ['request_id' => $request->attributes->get('request_id')] ]);
+        return response()->json(['success' => true, 'message' => 'Workflow cancelled.', 'data' => $result, 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
 }

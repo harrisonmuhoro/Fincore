@@ -3,12 +3,16 @@
 namespace Tests\Feature;
 
 use App\Domain\Finance\FinancialPeriodGuard;
+use App\Domain\Organization\OrganizationService;
 use App\Domain\Workflow\WorkflowService;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkflowDefinition;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class WorkflowFoundationTest extends TestCase
@@ -33,7 +37,7 @@ class WorkflowFoundationTest extends TestCase
         try {
             $service->decide($instance, $requester->id, 'approve', null, fn () => true);
             $this->fail('The requester must not approve their own workflow.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
+        } catch (HttpException) {
             $this->assertDatabaseCount('workflow_decisions', 0);
         }
 
@@ -45,11 +49,21 @@ class WorkflowFoundationTest extends TestCase
 
     public function test_period_guard_rejects_closed_and_missing_periods(): void
     {
-        $calendar = \Illuminate\Support\Facades\DB::table('financial_calendars')->insertGetId(['code' => 'TEST', 'name' => 'Test calendar', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
-        $year = \Illuminate\Support\Facades\DB::table('financial_years')->insertGetId(['calendar_id' => $calendar, 'code' => 'TEST-YEAR', 'starts_on' => '2031-01-01', 'ends_on' => '2031-12-31', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
-        $closed = \Illuminate\Support\Facades\DB::table('accounting_periods')->insertGetId(['financial_year_id' => $year, 'code' => 'P1', 'starts_on' => '2031-01-01', 'ends_on' => '2031-12-31', 'status' => 'closed', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $calendar = DB::table('financial_calendars')->insertGetId(['code' => 'TEST', 'name' => 'Test calendar', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $year = DB::table('financial_years')->insertGetId(['calendar_id' => $calendar, 'code' => 'TEST-YEAR', 'starts_on' => '2031-01-01', 'ends_on' => '2031-12-31', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $closed = DB::table('accounting_periods')->insertGetId(['financial_year_id' => $year, 'code' => 'P1', 'starts_on' => '2031-01-01', 'ends_on' => '2031-12-31', 'status' => 'closed', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         $guard = new FinancialPeriodGuard;
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $guard->assertOpen($closed);
+    }
+
+    public function test_organization_relationship_creation_rejects_hierarchy_cycles(): void
+    {
+        $first = DB::table('org_units')->insertGetId(['code' => 'A', 'name' => 'Unit A', 'unit_type' => 'test', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $second = DB::table('org_units')->insertGetId(['code' => 'B', 'name' => 'Unit B', 'unit_type' => 'test', 'status' => 'active', 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('org_relationships')->insert(['parent_unit_id' => $first, 'child_unit_id' => $second, 'effective_from' => '2030-01-01', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->expectException(ValidationException::class);
+        app(OrganizationService::class)->addRelationship($second, $first, '2030-01-01', 999);
     }
 }

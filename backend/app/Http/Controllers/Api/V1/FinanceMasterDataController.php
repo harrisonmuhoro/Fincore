@@ -44,6 +44,7 @@ class FinanceMasterDataController extends Controller
     public function accounts(Request $request, int $version): JsonResponse
     {
         abort_unless(DB::table('finance_master_versions')->where('id', $version)->exists(), 404);
+
         return $this->respond($request, 'Accounts retrieved.', DB::table('finance_accounts')->where('master_version_id', $version)->orderBy('code')->paginate(min(max($request->integer('per_page', 50), 1), 100)));
     }
 
@@ -55,9 +56,10 @@ class FinanceMasterDataController extends Controller
             'effective_from' => ['nullable', 'date'], 'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
         ]);
         abort_unless($request->user()->hasPermission('finance.coa.edit'), 403);
+
         return DB::transaction(function () use ($request, $version, $data): JsonResponse {
             $master = DB::table('finance_master_versions')->where('id', $version)->lockForUpdate()->firstOrFail();
-            abort_unless($master->status === 'draft' && $master->domain === 'finance_master', 409);
+            abort_unless($master->status === 'draft' && $master->domain === 'finance_master' && ! $master->approval_workflow_id, 409);
             if (! empty($data['parent_id'])) {
                 $parent = DB::table('finance_accounts')->where('id', $data['parent_id'])->where('master_version_id', $version)->first();
                 abort_unless($parent, 422, 'Parent account must belong to this draft version.');
@@ -78,27 +80,34 @@ class FinanceMasterDataController extends Controller
         $data = $request->validate(['code' => ['required', 'string', 'max:100'], 'name' => ['required', 'string', 'max:200'], 'attributes' => ['sometimes', 'array']]);
         abort_unless($request->user()->hasPermission('finance.coa.edit'), 403);
         $table = self::REFERENCE_TABLES[$kind];
-        abort_unless(DB::table('finance_master_versions')->where('id', $version)->where('status', 'draft')->exists(), 409);
-        abort_unless(DB::table('finance_master_versions')->where('id', $version)->where('domain', 'finance_master')->exists(), 409);
-        abort_unless(DB::table('finance_master_versions')->where('id', $version)->where('status', 'draft')->exists(), 409);
-        $id = DB::table($table)->insertGetId([
-            'master_version_id' => $version, 'code' => $data['code'], 'name' => $data['name'], 'status' => 'draft',
-            'attributes' => json_encode($data['attributes'] ?? [], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now(),
-        ]);
 
-        return $this->respond($request, 'Financial reference saved as draft.', DB::table($table)->where('id', $id)->first(), 201);
+        return DB::transaction(function () use ($request, $version, $data, $table): JsonResponse {
+            $master = DB::table('finance_master_versions')->where('id', $version)->lockForUpdate()->firstOrFail();
+            abort_unless($master->domain === 'finance_master' && $master->status === 'draft' && ! $master->approval_workflow_id, 409);
+            $id = DB::table($table)->insertGetId([
+                'master_version_id' => $version, 'code' => $data['code'], 'name' => $data['name'], 'status' => 'draft',
+                'attributes' => json_encode($data['attributes'] ?? [], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now(),
+            ]);
+
+            return $this->respond($request, 'Financial reference saved as draft.', DB::table($table)->where('id', $id)->first(), 201);
+        });
     }
 
     public function createDimension(Request $request, int $type): JsonResponse
     {
         $data = $request->validate(['code' => ['required', 'string', 'max:100'], 'name' => ['required', 'string', 'max:200']]);
         abort_unless($request->user()->hasPermission('finance.coa.edit'), 403);
-        abort_unless(DB::table('finance_dimension_types')->where('id', $type)->where('status', 'draft')->exists(), 409);
-        $id = DB::table('finance_dimensions')->insertGetId([
-            'dimension_type_id' => $type, 'code' => $data['code'], 'name' => $data['name'], 'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
-        ]);
 
-        return $this->respond($request, 'Dimension saved as draft.', DB::table('finance_dimensions')->where('id', $id)->first(), 201);
+        return DB::transaction(function () use ($request, $type, $data): JsonResponse {
+            $dimensionType = DB::table('finance_dimension_types')->where('id', $type)->firstOrFail();
+            $master = DB::table('finance_master_versions')->where('id', $dimensionType->master_version_id)->lockForUpdate()->firstOrFail();
+            abort_unless($master->domain === 'finance_master' && $master->status === 'draft' && ! $master->approval_workflow_id && $dimensionType->status === 'draft', 409);
+            $id = DB::table('finance_dimensions')->insertGetId([
+                'dimension_type_id' => $type, 'code' => $data['code'], 'name' => $data['name'], 'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+
+            return $this->respond($request, 'Dimension saved as draft.', DB::table('finance_dimensions')->where('id', $id)->first(), 201);
+        });
     }
 
     public function createCombination(Request $request, int $version): JsonResponse
@@ -110,41 +119,60 @@ class FinanceMasterDataController extends Controller
             'dimension_ids' => ['sometimes', 'array'], 'dimension_ids.*' => ['integer', 'exists:finance_dimensions,id'],
         ]);
         abort_unless($request->user()->hasPermission('finance.coa.edit'), 403);
-        $master = DB::table('finance_master_versions')->where('id', $version)->where('status', 'draft')->first();
-        abort_unless($master && $master->domain === 'finance_master', 409);
-        abort_unless(DB::table('finance_accounts')->where('id', $data['account_id'])->where('master_version_id', $version)->exists(), 422, 'Account must belong to this master version.');
-        foreach (['fund_id' => 'finance_funds', 'funding_source_id' => 'finance_funding_sources', 'economic_classification_id' => 'finance_economic_classifications'] as $field => $table) {
-            if (! empty($data[$field])) {
-                abort_unless(DB::table($table)->where('id', $data[$field])->where('master_version_id', $version)->exists(), 422, 'Combination references must belong to this master version.');
-            }
-        }
-        $id = DB::table('finance_account_combinations')->insertGetId([
-            'master_version_id' => $version, 'account_id' => $data['account_id'], 'fund_id' => $data['fund_id'] ?? null,
-            'funding_source_id' => $data['funding_source_id'] ?? null, 'economic_classification_id' => $data['economic_classification_id'] ?? null,
-            'dimension_ids' => json_encode($data['dimension_ids'] ?? [], JSON_THROW_ON_ERROR), 'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
-        ]);
 
-        return $this->respond($request, 'Account combination saved as draft.', DB::table('finance_account_combinations')->where('id', $id)->first(), 201);
+        return DB::transaction(function () use ($request, $version, $data): JsonResponse {
+            $master = DB::table('finance_master_versions')->where('id', $version)->lockForUpdate()->firstOrFail();
+            abort_unless($master->domain === 'finance_master' && $master->status === 'draft' && ! $master->approval_workflow_id, 409);
+            abort_unless(DB::table('finance_accounts')->where('id', $data['account_id'])->where('master_version_id', $version)->exists(), 422, 'Account must belong to this master version.');
+            foreach (['fund_id' => 'finance_funds', 'funding_source_id' => 'finance_funding_sources', 'economic_classification_id' => 'finance_economic_classifications'] as $field => $table) {
+                if (! empty($data[$field])) {
+                    abort_unless(DB::table($table)->where('id', $data[$field])->where('master_version_id', $version)->exists(), 422, 'Combination references must belong to this master version.');
+                }
+            }
+            foreach ($data['dimension_ids'] ?? [] as $dimensionId) {
+                abort_unless(DB::table('finance_dimensions')->where('id', $dimensionId)->whereIn('dimension_type_id', DB::table('finance_dimension_types')->where('master_version_id', $version)->select('id'))->exists(), 422, 'Dimensions must belong to this master version.');
+            }
+            $id = DB::table('finance_account_combinations')->insertGetId([
+                'master_version_id' => $version, 'account_id' => $data['account_id'], 'fund_id' => $data['fund_id'] ?? null,
+                'funding_source_id' => $data['funding_source_id'] ?? null, 'economic_classification_id' => $data['economic_classification_id'] ?? null,
+                'dimension_ids' => json_encode($data['dimension_ids'] ?? [], JSON_THROW_ON_ERROR), 'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+
+            return $this->respond($request, 'Account combination saved as draft.', DB::table('finance_account_combinations')->where('id', $id)->first(), 201);
+        });
     }
 
     public function createAccountingRule(Request $request, int $version): JsonResponse
     {
         $data = $request->validate(['rule_code' => ['required', 'string', 'max:100'], 'rule_definition' => ['required', 'array']]);
         abort_unless($request->user()->hasPermission('finance.coa.edit'), 403);
-        abort_unless(DB::table('finance_master_versions')->where('id', $version)->where('domain', 'finance_master')->where('status', 'draft')->exists(), 409);
-        $id = DB::table('finance_accounting_rules')->insertGetId([
-            'master_version_id' => $version, 'rule_code' => $data['rule_code'],
-            'rule_definition' => json_encode($data['rule_definition'], JSON_THROW_ON_ERROR), 'status' => 'draft',
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
 
-        return $this->respond($request, 'Accounting rule saved as draft.', DB::table('finance_accounting_rules')->where('id', $id)->first(), 201);
+        return DB::transaction(function () use ($request, $version, $data): JsonResponse {
+            $master = DB::table('finance_master_versions')->where('id', $version)->lockForUpdate()->firstOrFail();
+            abort_unless($master->domain === 'finance_master' && $master->status === 'draft' && ! $master->approval_workflow_id, 409);
+            $id = DB::table('finance_accounting_rules')->insertGetId([
+                'master_version_id' => $version, 'rule_code' => $data['rule_code'],
+                'rule_definition' => json_encode($data['rule_definition'], JSON_THROW_ON_ERROR), 'status' => 'draft',
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+
+            return $this->respond($request, 'Accounting rule saved as draft.', DB::table('finance_accounting_rules')->where('id', $id)->first(), 201);
+        });
     }
 
     public function activateVersion(Request $request, int $version, WorkflowService $workflows, OutboxPublisher $outbox): JsonResponse
     {
         return DB::transaction(function () use ($request, $version, $workflows, $outbox): JsonResponse {
             $master = DB::table('finance_master_versions')->where('id', $version)->lockForUpdate()->firstOrFail();
+            if ($master->approval_workflow_id) {
+                $previous = WorkflowInstance::query()->findOrFail($master->approval_workflow_id);
+                if (in_array($previous->status, ['rejected', 'returned'], true)) {
+                    DB::table('finance_master_versions')->where('id', $version)->update(['approval_workflow_id' => null, 'updated_at' => now()]);
+                    $master->approval_workflow_id = null;
+                } elseif ($previous->status !== 'approved') {
+                    abort(409, 'Master-data activation is still awaiting approval.');
+                }
+            }
             if (! $master->approval_workflow_id) {
                 $flow = $workflows->start('finance.master_data.activate', 'finance_master_version', $version, $request->user()->id, [], $request->attributes->get('request_id'));
                 DB::table('finance_master_versions')->where('id', $version)->update(['approval_workflow_id' => (string) $flow->id, 'updated_at' => now()]);
@@ -159,6 +187,8 @@ class FinanceMasterDataController extends Controller
             foreach (['finance_accounts', 'finance_funds', 'finance_funding_sources', 'finance_economic_classifications', 'finance_dimension_types', 'finance_accounting_rules', 'finance_account_combinations'] as $table) {
                 $hashContent .= DB::table($table)->where('master_version_id', $version)->orderBy('id')->get()->toJson();
             }
+            $hashContent .= DB::table('finance_dimensions')->whereIn('dimension_type_id', DB::table('finance_dimension_types')->where('master_version_id', $version)->select('id'))->orderBy('id')->get()->toJson();
+            $combinationIds = DB::table('finance_account_combinations')->where('master_version_id', $version)->pluck('id');
             DB::table('finance_master_versions')->where('id', $version)->update([
                 'status' => 'active', 'effective_from' => now(), 'content_hash' => hash('sha256', $hashContent), 'updated_at' => now(),
             ]);
@@ -175,7 +205,10 @@ class FinanceMasterDataController extends Controller
                     ->where('status', 'active')->update(['status' => 'superseded', 'updated_at' => now()]);
                 DB::table('finance_master_versions')->whereIn('id', $previousVersions)->update(['status' => 'superseded', 'effective_to' => now(), 'updated_at' => now()]);
             }
-            $outbox->record('MasterDataVersionActivated', 'financial_master_data', 'finance_master_version', $version, ['domain' => $master->domain, 'version' => $master->version, 'content_hash' => hash('sha256', $hashContent)], $request->attributes->get('request_id'));
+            $outbox->record('MasterDataVersionActivated', 'financial_master_data', 'finance_master_version', $version, ['domain' => $master->domain, 'version' => $master->version, 'content_hash' => hash('sha256', $hashContent), 'actor_id' => $request->user()->id], $request->attributes->get('request_id'));
+            foreach ($combinationIds as $combinationId) {
+                $outbox->record('AccountCombinationActivated', 'financial_master_data', 'finance_account_combination', $combinationId, ['master_version_id' => $version, 'actor_id' => $request->user()->id], $request->attributes->get('request_id'));
+            }
 
             return $this->respond($request, 'Financial master data version activated.', DB::table('finance_master_versions')->where('id', $version)->first());
         });

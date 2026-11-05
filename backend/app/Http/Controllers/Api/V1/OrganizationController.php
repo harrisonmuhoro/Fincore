@@ -8,19 +8,21 @@ use App\Http\Requests\Api\V1\StoreOrganizationUnitRequest;
 use App\Models\OrganizationUnit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrganizationController extends Controller
 {
     public function relationships(Request $request): JsonResponse
     {
         $actor = $request->user();
-        $query = \Illuminate\Support\Facades\DB::table('org_relationships')->orderBy('id');
+        $query = DB::table('org_relationships')->orderBy('id');
         if (! $actor->hasPermission('org.unit.view')) {
             $scopeIds = $actor->roles()->wherePivot('status', 'active')->wherePivot('scope_type', 'org_unit')
                 ->whereHas('permissions', fn ($permissions) => $permissions->where('code', 'org.unit.view'))
                 ->get()->map(fn ($role) => (string) $role->pivot->scope_id)->all();
             $query->whereIn('parent_unit_id', $scopeIds);
         }
+
         return response()->json(['success' => true, 'message' => 'Organization relationships retrieved.', 'data' => $query->paginate(min(max($request->integer('per_page', 25), 1), 100)), 'meta' => ['request_id' => $request->attributes->get('request_id')]]);
     }
 
@@ -81,7 +83,7 @@ class OrganizationController extends Controller
 
     public function submitRelationship(Request $request, int $relationship, OrganizationService $service): JsonResponse
     {
-        $record = \Illuminate\Support\Facades\DB::table('org_relationships')->where('id', $relationship)->firstOrFail();
+        $record = DB::table('org_relationships')->where('id', $relationship)->firstOrFail();
         abort_unless($request->user()->hasPermission('org.restructure.submit', 'org_unit', (string) $record->parent_unit_id), 403);
         $workflow = $service->submitRelationship($relationship, $request->user()->id, $request->attributes->get('request_id'));
 
@@ -90,7 +92,7 @@ class OrganizationController extends Controller
 
     public function activateRelationship(Request $request, int $relationship, OrganizationService $service): JsonResponse
     {
-        $record = \Illuminate\Support\Facades\DB::table('org_relationships')->where('id', $relationship)->firstOrFail();
+        $record = DB::table('org_relationships')->where('id', $relationship)->firstOrFail();
         abort_unless($request->user()->hasPermission('org.restructure.approve', 'org_unit', (string) $record->parent_unit_id), 403);
         $service->activateRelationship($relationship, $request->user()->id, $request->attributes->get('request_id'));
 

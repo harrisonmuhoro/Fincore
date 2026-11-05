@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
-use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireMfa;
+use App\Http\Middleware\RequirePermission;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;

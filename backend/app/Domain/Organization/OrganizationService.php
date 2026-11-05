@@ -26,6 +26,12 @@ class OrganizationService
     {
         return DB::transaction(function () use ($unit, $actorId, $requestId): WorkflowInstance {
             $locked = OrganizationUnit::query()->lockForUpdate()->findOrFail($unit->id);
+            if ($locked->status === 'in_review' && $locked->approval_workflow_id) {
+                $previous = WorkflowInstance::query()->findOrFail($locked->approval_workflow_id);
+                if (in_array($previous->status, ['rejected', 'returned'], true)) {
+                    $locked->forceFill(['status' => 'draft', 'approval_workflow_id' => null])->save();
+                }
+            }
             if ($locked->status !== 'draft') {
                 abort(409, 'Only a draft organization unit can be submitted.');
             }
@@ -43,7 +49,7 @@ class OrganizationService
             $workflow = WorkflowInstance::query()->findOrFail($locked->approval_workflow_id);
             abort_unless($workflow->status === 'approved' && $workflow->requested_by !== $actorId, 403, 'Independent approved workflow completion is required.');
             $locked->forceFill(['status' => 'active', 'version' => $locked->version + 1])->save();
-            $this->outbox->record('OrganizationUnitActivated', 'organization', 'org_unit', $locked->id, ['code' => $locked->code, 'version' => $locked->version], $requestId);
+            $this->outbox->record('OrganizationUnitActivated', 'organization', 'org_unit', $locked->id, ['code' => $locked->code, 'version' => $locked->version, 'actor_id' => $actorId], $requestId);
 
             return $locked;
         });
@@ -72,6 +78,13 @@ class OrganizationService
     {
         return DB::transaction(function () use ($relationshipId, $actorId, $requestId): WorkflowInstance {
             $relationship = DB::table('org_relationships')->where('id', $relationshipId)->lockForUpdate()->firstOrFail();
+            if ($relationship->status === 'in_review' && $relationship->approval_workflow_id) {
+                $previous = WorkflowInstance::query()->findOrFail($relationship->approval_workflow_id);
+                if (in_array($previous->status, ['rejected', 'returned'], true)) {
+                    DB::table('org_relationships')->where('id', $relationshipId)->update(['status' => 'draft', 'approval_workflow_id' => null, 'updated_at' => now()]);
+                    $relationship->status = 'draft';
+                }
+            }
             abort_unless($relationship->status === 'draft', 409);
             $workflow = $this->workflows->start('org.relationship.activate', 'org_relationship', $relationshipId, $actorId, ['scope_type' => 'org_unit', 'scope_id' => (string) $relationship->parent_unit_id], $requestId);
             DB::table('org_relationships')->where('id', $relationshipId)->update(['status' => 'in_review', 'approval_workflow_id' => (string) $workflow->id, 'updated_at' => now()]);
@@ -92,7 +105,7 @@ class OrganizationService
             DB::table('org_relationships')->where('id', $relationshipId)->update(['status' => 'active', 'updated_at' => now()]);
             $this->outbox->record('OrgHierarchyChanged', 'organization', 'org_relationship', $relationshipId, [
                 'parent_unit_id' => $relationship->parent_unit_id, 'child_unit_id' => $relationship->child_unit_id,
-                'effective_from' => $relationship->effective_from, 'effective_to' => $relationship->effective_to,
+                'effective_from' => $relationship->effective_from, 'effective_to' => $relationship->effective_to, 'actor_id' => $actorId,
             ], $requestId);
         });
     }

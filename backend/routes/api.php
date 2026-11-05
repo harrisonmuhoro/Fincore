@@ -1,11 +1,12 @@
 <?php
 
-use App\Http\Controllers\Api\V1\HealthController;
-use App\Http\Controllers\Api\V1\IdentityController;
-use App\Http\Controllers\Api\V1\IdentityAdminController;
-use App\Http\Controllers\Api\V1\FinancialCalendarController;
 use App\Http\Controllers\Api\V1\FinanceMasterDataController;
+use App\Http\Controllers\Api\V1\FinancialCalendarController;
+use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\IdentityAdminController;
+use App\Http\Controllers\Api\V1\IdentityController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationReferenceController;
 use App\Http\Controllers\Api\V1\SystemSettingsController;
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Http\Request;
@@ -20,12 +21,12 @@ Route::post('/auth/activate', [IdentityAdminController::class, 'activate'])->mid
 Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
     Route::post('/auth/logout', [IdentityController::class, 'logout'])->name('api.auth.logout');
     Route::get('/user', function (Request $request) {
-    return response()->json([
-        'success' => true,
-        'message' => 'Authenticated user retrieved.',
-        'data' => $request->user(),
-        'meta' => ['request_id' => $request->attributes->get('request_id')],
-    ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Authenticated user retrieved.',
+            'data' => $request->user(),
+            'meta' => ['request_id' => $request->attributes->get('request_id')],
+        ]);
     })->name('api.user');
 
     Route::get('/system/settings', [SystemSettingsController::class, 'index'])->name('api.system.settings.index');
@@ -39,6 +40,10 @@ Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
     Route::post('/organization/relationships', [OrganizationController::class, 'relate'])->name('api.organization.relationships.store');
     Route::post('/organization/relationships/{relationship}/submit', [OrganizationController::class, 'submitRelationship'])->name('api.organization.relationships.submit');
     Route::post('/organization/relationships/{relationship}/activate', [OrganizationController::class, 'activateRelationship'])->name('api.organization.relationships.activate');
+    Route::get('/organization/references/{kind}', [OrganizationReferenceController::class, 'index'])->name('api.organization.references.index');
+    Route::post('/organization/references/{kind}', [OrganizationReferenceController::class, 'store'])->name('api.organization.references.store');
+    Route::post('/organization/references/{kind}/{record}/submit', [OrganizationReferenceController::class, 'submit'])->name('api.organization.references.submit');
+    Route::post('/organization/references/{kind}/{record}/activate', [OrganizationReferenceController::class, 'activate'])->name('api.organization.references.activate');
     Route::post('/workflow-definitions', [WorkflowController::class, 'storeDefinition'])->middleware('permission:workflow.definition.create')->name('api.workflow.definitions.store');
     Route::get('/workflow-definitions', [WorkflowController::class, 'definitions'])->middleware('permission:workflow.definition.create')->name('api.workflow.definitions.index');
     Route::post('/workflow-definitions/{definition}/publish', [WorkflowController::class, 'publish'])->middleware('permission:workflow.definition.publish')->name('api.workflow.definitions.publish');
@@ -51,6 +56,7 @@ Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
     Route::post('/users', [IdentityAdminController::class, 'invite'])->middleware('permission:iam.user.invite')->name('api.users.invite');
     Route::get('/users', [IdentityAdminController::class, 'users'])->middleware('permission:iam.user.view')->name('api.users.index');
     Route::get('/roles', [IdentityAdminController::class, 'roles'])->middleware('permission:iam.permission.manage')->name('api.roles.index');
+    Route::get('/role-assignments', [IdentityAdminController::class, 'roleAssignments'])->name('api.role-assignments.index');
     Route::post('/users/{user}/suspend', [IdentityAdminController::class, 'suspend'])->middleware('permission:iam.user.suspend')->name('api.users.suspend');
     Route::post('/users/{user}/reinstate', [IdentityAdminController::class, 'reinstate'])->middleware('permission:iam.user.reinstate')->name('api.users.reinstate');
     Route::post('/users/{user}/sessions/{session}/revoke', [IdentityAdminController::class, 'revokeSession'])->middleware('permission:iam.session.revoke')->name('api.users.sessions.revoke');
@@ -80,6 +86,6 @@ Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
 });
 
 Route::middleware(['auth:sanctum', 'abilities:mfa-enrollment'])->group(function (): void {
-    Route::post('/auth/mfa/setup', [IdentityController::class, 'startMfa'])->name('api.auth.mfa.setup');
-    Route::post('/auth/mfa/confirm', [IdentityController::class, 'confirmMfa'])->name('api.auth.mfa.confirm');
+    Route::post('/auth/mfa/setup', [IdentityController::class, 'startMfa'])->middleware('throttle:login')->name('api.auth.mfa.setup');
+    Route::post('/auth/mfa/confirm', [IdentityController::class, 'confirmMfa'])->middleware('throttle:login')->name('api.auth.mfa.confirm');
 });

@@ -46,6 +46,9 @@ class BootstrapFoundationOperator extends Command
             $role->permissions()->syncWithoutDetaching(Permission::query()->whereIn('code', $permissions)->pluck('id'));
 
             $user = User::query()->firstOrNew(['email' => $email]);
+            if ($user->exists && ! in_array($user->status, ['verified', 'active'], true)) {
+                throw new \RuntimeException('Existing account is not eligible for bootstrap access.');
+            }
             if (! $user->exists) {
                 $user->forceFill(['name' => $name, 'password' => $password, 'status' => 'verified', 'email_verified_at' => now()])->save();
             }
