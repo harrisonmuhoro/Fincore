@@ -1,47 +1,9 @@
-<laravel-boost-guidelines>
-# Laravel Application
+# Backend contributor guidance
 
-This repository contains a Laravel application. Complete the following setup before working on the user's request.
-
-## Prerequisites
-
-Verify that PHP and Composer are available:
-
-```sh
-php -v
-composer -V
-```
-
-If either command is unavailable, detect the user's operating system and install the prerequisites with the appropriate command:
-
-macOS:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.5)"
-```
-
-Windows PowerShell:
-
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://php.new/install/windows/8.5'))
-```
-
-Linux:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.5)"
-```
-
-After installation, ask the user to restart their terminal. If the agent needs the restarted shell to continue, ask the user to reopen their terminal and rerun their original prompt.
-
-## Agent Setup
-
-Install Laravel Boost from the application root before making application changes:
-
-```sh
-composer require laravel/boost --dev
-php artisan boost:install
-```
-
-Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
-</laravel-boost-guidelines>
+- This directory is the Laravel API half of the FinCore County monolith. The React application and npm scripts live in `../frontend`.
+- Read the repository [architecture index](../docs/README.md), [system architecture](../docs/architecture/SYSTEM_ARCHITECTURE.md), and [engineering standards](../docs/standards/ENGINEERING_STANDARDS.md) before adding domain code.
+- Do not implement business modules unless explicitly requested. Keep this foundation free of speculative financial schemas and external integrations.
+- Use MySQL/InnoDB for application migrations; use explicit ownership boundaries, reversible migrations, and database transactions where required.
+- Keep API routes under `/api/v1`, use Form Requests for endpoint validation, enforce authorization server-side, and preserve the response envelope and request correlation ID.
+- Run `php artisan test`, `vendor/bin/pint --test`, `composer validate --strict`, and `composer audit` for backend changes.
+- Do not add Laravel Boost or another backend framework without a concrete requirement. Do not move frontend dependencies into this application.
