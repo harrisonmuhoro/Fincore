@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\BudgetLedgerController;
 use App\Http\Controllers\Api\V1\FinanceMasterDataController;
 use App\Http\Controllers\Api\V1\FinancialCalendarController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -105,6 +106,26 @@ Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
     Route::post('/finance/master-data/versions/{version}/accounting-rules', [FinanceMasterDataController::class, 'createAccountingRule'])->middleware('permission:finance.coa.edit')->name('api.finance.accounting-rules.store');
     Route::post('/finance/master-data/versions/{version}/activate', [FinanceMasterDataController::class, 'activateVersion'])->middleware('permission:finance.master_data.activate')->name('api.finance.master-data.activate');
     Route::post('/finance/account-combinations/validate', [FinanceMasterDataController::class, 'validateCombination'])->middleware('permission:finance.account_combination.validate')->name('api.finance.combinations.validate');
+    Route::get('/budget/calls', [BudgetLedgerController::class, 'calls'])->middleware('permission:budget_planning.submission.view')->name('api.budget.calls.index');
+    Route::post('/budget/calls', [BudgetLedgerController::class, 'createCall'])->middleware('permission:budget_planning.call.manage')->name('api.budget.calls.store');
+    Route::get('/budget/calls/{call}/ceilings', [BudgetLedgerController::class, 'ceilings'])->middleware('permission:budget_planning.submission.view')->name('api.budget.ceilings.index');
+    Route::post('/budget/calls/{call}/ceilings', [BudgetLedgerController::class, 'createCeiling'])->middleware('permission:budget_planning.ceiling.manage')->name('api.budget.ceilings.store');
+    Route::get('/budget/estimates', [BudgetLedgerController::class, 'estimates'])->middleware('permission:budget_planning.submission.view')->name('api.budget.estimates.index');
+    Route::get('/budget/versions', [BudgetLedgerController::class, 'versions'])->middleware('permission:budget_planning.submission.view')->name('api.budget.versions.index');
+    Route::post('/budget/estimates', [BudgetLedgerController::class, 'createEstimate'])->middleware('permission:budget_planning.estimate.create')->name('api.budget.estimates.store');
+    Route::post('/budget/estimates/{estimate}/submit', [BudgetLedgerController::class, 'submitEstimate'])->middleware('permission:budget_planning.submission.submit')->name('api.budget.estimates.submit');
+    Route::post('/budget/calls/{call}/consolidate', [BudgetLedgerController::class, 'consolidate'])->middleware('permission:budget_planning.version.consolidate')->name('api.budget.calls.consolidate');
+    Route::post('/budget/versions/{version}/publish', [BudgetLedgerController::class, 'publishBudget'])->middleware('permission:budget_planning.version.publish')->name('api.budget.versions.publish');
+    Route::get('/budget/allocations', [BudgetLedgerController::class, 'allocations'])->middleware('permission:budget_execution.allocation.view')->name('api.budget.allocations.index');
+    Route::post('/budget/allocations', [BudgetLedgerController::class, 'createAllocation'])->middleware('permission:budget_execution.allocation.manage')->name('api.budget.allocations.store');
+    Route::get('/budget/commitments', [BudgetLedgerController::class, 'commitments'])->middleware('permission:budget_execution.commitment.view')->name('api.budget.commitments.index');
+    Route::post('/budget/commitments', [BudgetLedgerController::class, 'createCommitment'])->middleware('permission:budget_execution.commitment.reserve')->name('api.budget.commitments.store');
+    Route::post('/budget/commitments/{commitment}/movement', [BudgetLedgerController::class, 'moveCommitment'])->middleware('permission:budget_execution.commitment.adjust')->name('api.budget.commitments.movement');
+    Route::get('/ledger/journals', [BudgetLedgerController::class, 'journals'])->middleware('permission:ledger.journal.view')->name('api.ledger.journals.index');
+    Route::post('/ledger/journals', [BudgetLedgerController::class, 'createJournal'])->middleware('permission:ledger.journal.create')->name('api.ledger.journals.store');
+    Route::post('/ledger/journals/{journal}/post', [BudgetLedgerController::class, 'postJournal'])->middleware('permission:ledger.journal.post')->name('api.ledger.journals.post');
+    Route::post('/ledger/journals/{journal}/reverse', [BudgetLedgerController::class, 'reverseJournal'])->middleware('permission:ledger.journal.reverse')->name('api.ledger.journals.reverse');
+    Route::get('/ledger/trial-balance', [BudgetLedgerController::class, 'trialBalance'])->middleware('permission:ledger.trial_balance.view')->name('api.ledger.trial-balance');
 });
 
 Route::middleware(['auth:sanctum', 'abilities:mfa-enrollment'])->group(function (): void {

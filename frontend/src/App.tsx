@@ -12,6 +12,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { SignInPage } from './pages/SignInPage'
 import { SystemStatusPage } from './pages/SystemStatusPage'
 import { SharedControlsPage } from './pages/SharedControlsPage'
+import { BudgetLedgerPage } from './pages/BudgetLedgerPage'
 import { WorkflowPage } from './pages/WorkflowPage'
 import { hasAccessToken } from './lib/api'
 
@@ -33,6 +34,7 @@ export function App() {
         <Route path="organization" element={<PrivatePage><OrganizationPage /></PrivatePage>} />
         <Route path="workflows" element={<PrivatePage><WorkflowPage /></PrivatePage>} />
         <Route path="finance" element={<PrivatePage><FinancialWorkspacePage /></PrivatePage>} />
+        <Route path="budget-ledger" element={<PrivatePage><BudgetLedgerPage /></PrivatePage>} />
         <Route path="shared-controls" element={<PrivatePage><SharedControlsPage /></PrivatePage>} />
         <Route path="*" element={<Navigate to="/not-found" replace />} />
         <Route path="not-found" element={<NotFoundPage />} />

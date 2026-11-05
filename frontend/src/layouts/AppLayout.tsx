@@ -9,6 +9,7 @@ const navigation = [
   { label: 'Identity and roles', to: '/identity', icon: UserCog, private: true },
   { label: 'Workflow', to: '/workflows', icon: Workflow, private: true },
   { label: 'Financial setup', to: '/finance', icon: Landmark, private: true },
+  { label: 'Budget and ledger', to: '/budget-ledger', icon: Landmark, private: true },
   { label: 'Shared controls', to: '/shared-controls', icon: FileText, private: true },
   { label: 'System settings', to: '/system-settings', icon: Settings, private: true },
 ]
@@ -44,7 +45,7 @@ export function AppLayout() {
         </aside>
         <main className="min-w-0 px-5 py-8 sm:px-8 lg:px-10"><Outlet /></main>
       </div>
-      <footer className="border-t border-[var(--color-border)] bg-white px-5 py-4 text-center text-xs text-[var(--color-muted)]">FinCore County · Platform foundation · No financial transactions are enabled</footer>
+      <footer className="border-t border-[var(--color-border)] bg-white px-5 py-4 text-center text-xs text-[var(--color-muted)]">FinCore County · Platform foundation with initial budget and ledger workflows</footer>
     </div>
   )
 }

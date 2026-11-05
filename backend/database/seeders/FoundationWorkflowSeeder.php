@@ -20,6 +20,8 @@ class FoundationWorkflowSeeder extends Seeder
             'finance.master_data.activate' => ['Financial master data activation', 'finance.master_data.activate'],
             'finance.accounting_period.open' => ['Accounting period opening', 'finance.accounting_period.open'],
             'finance.accounting_period.reopen' => ['Accounting period reopening', 'finance.accounting_period.reopen'],
+            'budget.version.approve' => ['Budget version approval', 'budget_planning.version.publish'],
+            'ledger.journal.post' => ['Ledger journal posting approval', 'ledger.journal.post'],
         ];
 
         foreach ($workflows as $code => [$name, $permission]) {

@@ -21,3 +21,7 @@ Classify retryable transport failure vs permanent validation rejection vs ambigu
 ## Current Phase 2 notification consumer
 
 `notifications:consume-domain-events` consumes only `ApprovalCompleted` outbox events, resolves the workflow requester's ID from the workflow owner, and creates an idempotent user notification. It records a module-owned receipt and does not mark the shared outbox event as externally published. Email delivery is queued only when the recipient enables that channel. Other event subscriptions, general outbox publication, retries/dead-letter operations, and consumer projections remain Module 25/shared-platform work.
+
+## Current Phase 3 budget and ledger events
+
+Modules 06, 07 and 13 publish these transactional outbox facts: `BudgetEstimateSubmitted`, `BudgetVersionSubmittedForApproval`, `ApprovedBudgetVersionPublished`, `BudgetCommitmentReserved`, and `JournalPosted`. Payloads carry the relevant owned record IDs and minimum source/version/amount metadata. No Procurement, Accounts Payable, Treasury, bank or government-system adapter consumes or emits these events yet. Reversal creation remains a ledger-owned draft operation and produces no posted reversal event until the journal independently passes the standard posting workflow.

@@ -9,7 +9,7 @@ class FinancialPeriodGuard
 {
     public function assertOpen(int $periodId): void
     {
-        $period = DB::table('accounting_periods')->where('id', $periodId)->first();
+        $period = DB::table('accounting_periods')->where('id', $periodId)->lockForUpdate()->first();
         if (! $period) {
             throw ValidationException::withMessages(['accounting_period_id' => ['The accounting period does not exist.']]);
         }
