@@ -8,6 +8,20 @@ export type ApiEnvelope<T> = {
   errors?: Record<string, string[]>
 }
 
+const tokenKey = 'fincore.access-token'
+
+export function saveAccessToken(token: string): void {
+  sessionStorage.setItem(tokenKey, token)
+}
+
+export function clearAccessToken(): void {
+  sessionStorage.removeItem(tokenKey)
+}
+
+export function hasAccessToken(): boolean {
+  return Boolean(sessionStorage.getItem(tokenKey))
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly errors: Record<string, string[]> | undefined
@@ -20,11 +34,18 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<ApiEnvelope<T>> {
+async function apiRequest<T>(path: string, method: string, payload?: unknown, signal?: AbortSignal): Promise<ApiEnvelope<T>> {
+  const token = sessionStorage.getItem(tokenKey)
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json', 'X-Request-ID': crypto.randomUUID() },
+    method,
+    headers: {
+      Accept: 'application/json',
+      'X-Request-ID': crypto.randomUUID(),
+      ...(payload ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     credentials: 'include',
+    ...(payload ? { body: JSON.stringify(payload) } : {}),
     ...(signal ? { signal } : {}),
   })
 
@@ -40,4 +61,16 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<Api
   }
 
   return body
+}
+
+export function apiGet<T>(path: string, signal?: AbortSignal): Promise<ApiEnvelope<T>> {
+  return apiRequest<T>(path, 'GET', undefined, signal)
+}
+
+export function apiPost<T>(path: string, payload?: unknown): Promise<ApiEnvelope<T>> {
+  return apiRequest<T>(path, 'POST', payload)
+}
+
+export function apiPatch<T>(path: string, payload: unknown): Promise<ApiEnvelope<T>> {
+  return apiRequest<T>(path, 'PATCH', payload)
 }

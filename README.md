@@ -1,6 +1,6 @@
 # FinCore County
 
-FinCore County is a modular county public financial management platform foundation. It is not affiliated with or connected to an official county or government system. The repository now contains a Laravel API and React/TypeScript application shell; business modules and financial transactions are not implemented.
+FinCore County is a modular county public financial management platform foundation. It is not affiliated with or connected to an official county or government system. The repository contains a Laravel API and React/TypeScript application. Modules 01–05 provide platform identity, organization, workflow and financial master-data foundations; transaction processing is not implemented.
 
 ## Technology
 
@@ -14,6 +14,7 @@ FinCore County is a modular county public financial management platform foundati
 
 - [Architecture and module documentation](docs/README.md)
 - [13 architecture specifications](docs/architecture/)
+- [Phase 1 foundation implementation record](docs/architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md)
 - [26 module specifications](docs/modules/)
 - [Existing module implementation prompts](docs/module-implementation-prompts/README.md)
 - [Decision log](docs/decisions/README.md)
@@ -63,7 +64,8 @@ GRANT ALL PRIVILEGES ON fincore_county.* TO 'fincore_app'@'127.0.0.1';
 Set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD` in `backend/.env`. Start MySQL, then run:
 
 ```powershell
-php artisan migrate
+php artisan migrate --seed
+php artisan iam:bootstrap-operator operator@example.test
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
@@ -128,9 +130,11 @@ GitHub Actions runs backend checks with MySQL 8 and Redis services, frontend che
 
 ## Implemented and planned
 
-**Implemented in Phase 0:** Laravel 13 project, versioned REST routing, Sanctum package foundation, API response/error envelope, request IDs, liveness/readiness checks, MySQL/Redis configuration, CORS allow-list, rate limit baseline, React application shell, API client, accessible navigation/status/error states, UI primitives, automated tests, and CI checks.
+**Implemented in Phase 0:** Laravel 13 project, versioned REST routing, API response/error envelope, request IDs, liveness/readiness checks, MySQL/Redis configuration, CORS allow-list, rate limit baseline, React application shell, API client, accessible navigation/status/error states, UI primitives, automated tests, and CI checks.
 
-**Not implemented:** identity lifecycle and role management, organization records, workflow approvals, financial master data, any of the remaining business modules, approval thresholds, official fiscal dates/accounting rules, real transactions, and external government/bank/payroll integrations. Follow the [implementation roadmap](docs/architecture/IMPLEMENTATION_ROADMAP.md) after Phase 0 review.
+**Implemented in Phase 1:** Modules 01–05 foundation schemas and APIs for settings/sequences, identity/MFA/RBAC, organization, workflows and financial master data. The [Phase 1 implementation record](docs/architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md) describes delivered scope and limits.
+
+**Not implemented:** transaction modules 06–26, general-ledger posting, budget commitments, procurement, payments, official fiscal dates/accounting rules, approval limits, external government/bank/payroll integrations, or event delivery workers. Follow the [implementation roadmap](docs/architecture/IMPLEMENTATION_ROADMAP.md).
 
 ## Architecture decisions
 

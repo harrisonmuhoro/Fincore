@@ -80,3 +80,5 @@ Active/suspended users, MFA enrollment, failed-login trends, privileged assignme
 
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.
+
+Account invitation uses the configured mail transport and the password-reset token store for one-time activation. New users set a password, verify the invitation, then enroll RFC 6238 TOTP before their account becomes active. A deployment-only `iam:bootstrap-operator` command creates a foundation operator without business approval permissions; there is no default seeded password or county finance approver.

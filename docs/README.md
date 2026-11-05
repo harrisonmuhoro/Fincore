@@ -1,6 +1,6 @@
 # FinCore County Documentation Index
 
-FinCore County is a proposed county public financial management platform inspired by common IFMIS capabilities. It makes no claim of official government ownership or integration. Phase 0 provides the application foundation; business modules and financial transactions are not implemented.
+FinCore County is a proposed county public financial management platform inspired by common IFMIS capabilities. It makes no claim of official government ownership or integration. Phase 1 implements Modules 01–05 as platform and financial master-data foundations; transaction modules are not implemented.
 
 ## Architecture documents
 - [SYSTEM_OVERVIEW](architecture/SYSTEM_OVERVIEW.md)
@@ -55,3 +55,6 @@ FinCore County is a proposed county public financial management platform inspire
 
 ## Architecture and delivery
 Laravel/PHP 8.3+, Sanctum REST, React/TypeScript/Vite, Tailwind/shadcn, MySQL 8 and Redis. Modular monolith with domain-owned data and API-first contracts. Use fictional data; KES default. See [implementation roadmap](architecture/IMPLEMENTATION_ROADMAP.md).
+
+## Implementation records
+- [Phase 1 foundation implementation, APIs, bootstrap and limitations](architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md)

@@ -18,4 +18,4 @@ The versioned API root is `/api/v1`. Liveness and readiness endpoints are `/api/
 
 Run checks with `php artisan test`, `vendor/bin/pint --test`, and `composer audit`.
 
-Phase 0 contains no business module endpoints, financial records, user lifecycle or role/approval implementation. Sanctum is an authentication package foundation only.
+Modules 01–05 implement identity, MFA, RBAC, organization, workflow and financial master-data foundations. See the [Phase 1 implementation record](../docs/architecture/PHASE_1_FOUNDATION_IMPLEMENTATION.md) for setup steps, API scope and known limitations. Transaction posting remains out of scope.

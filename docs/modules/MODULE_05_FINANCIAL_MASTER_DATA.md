@@ -16,6 +16,7 @@ Finance master-data steward maintains draft COA and dimensions. Financial contro
 | `finance.coa.edit` | Finance master-data steward | No, draft only | No edits to active referenced versions. |
 | `finance.account_combination.validate` | Finance master-data steward | No | Validation has no activation/posting side effect. |
 | `finance.account_combination.activate` | Independent finance authority | Yes | Maker-checker; active version is immutable. |
+| `finance.master_data.activate` | Independent finance authority | Yes | Publishes a complete finance-master version after a separate configured workflow approves it. |
 | `finance.financial_year.view` | Calendar steward/accountant | No | Read-only calendar and status scope. |
 | `finance.accounting_period.view` | Accountant/period controller | No | Read-only status, transition history and close evidence. |
 | `finance.financial_year.create` | Calendar steward | No, draft only | No overlapping financial years; no assumed dates. |
@@ -65,6 +66,8 @@ FinancialMasterDataService validates versioned COA and combination graphs; Calen
 | POST | `/api/v1/finance/account-combinations/validate` | Validate active account/fund/dimension references. | `finance.account_combination.validate` | 200 result with rule version; no write activation. |
 
 All state changes record actor, reason, approval, version and correlation ID; closed-period state is never updated through generic PATCH.
+
+The implementation also exposes `/api/v1/finance/master-data/versions` for draft finance-master versions, version-scoped accounts/references/combinations/accounting rules, and an independent activation command. Currency metadata is read from `/api/v1/finance/currencies`; calendar records are maintained through `/api/v1/finance/calendars`. These endpoints never seed account taxonomies or fiscal dates.
 ## 11. Frontend responsibilities
 COA tree editor with parent/type validation; dimension and fund registers; combination validation workspace showing failed rule paths; version comparison and activation queue; financial year calendar view; period register/calendar with future/open/closed/reopened badges; close checklist from ledger reconciliation status; controlled reopen request/evidence form; change history and invalid-reference report. Only authorized finance roles see actions; backend still rechecks.
 
