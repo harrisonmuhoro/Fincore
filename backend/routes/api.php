@@ -1,0 +1,134 @@
+<?php
+
+use App\Http\Controllers\Api\V1\BudgetLedgerController;
+use App\Http\Controllers\Api\V1\FinanceMasterDataController;
+use App\Http\Controllers\Api\V1\FinancialCalendarController;
+use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\IdentityAdminController;
+use App\Http\Controllers\Api\V1\IdentityController;
+use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationReferenceController;
+use App\Http\Controllers\Api\V1\SharedControlsController;
+use App\Http\Controllers\Api\V1\SystemSettingsController;
+use App\Http\Controllers\Api\V1\WorkflowController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/health/live', [HealthController::class, 'live'])->name('api.health.live');
+Route::get('/health/ready', [HealthController::class, 'ready'])->name('api.health.ready');
+
+Route::post('/auth/login', [IdentityController::class, 'login'])->middleware('throttle:login')->name('api.auth.login');
+Route::post('/auth/activate', [IdentityAdminController::class, 'activate'])->middleware('throttle:login')->name('api.auth.activate');
+
+Route::middleware(['auth:sanctum', 'mfa'])->group(function (): void {
+    Route::post('/auth/logout', [IdentityController::class, 'logout'])->name('api.auth.logout');
+    Route::get('/documents', [SharedControlsController::class, 'documents'])->middleware('permission:records.document.view')->name('api.documents.index');
+    Route::post('/documents', [SharedControlsController::class, 'uploadDocument'])->middleware('permission:records.document.upload')->name('api.documents.store');
+    Route::get('/documents/{document}', [SharedControlsController::class, 'document'])->middleware('permission:records.document.view')->name('api.documents.show');
+    Route::post('/documents/{document}/versions', [SharedControlsController::class, 'uploadDocumentVersion'])->middleware('permission:records.document.upload')->name('api.documents.versions.store');
+    Route::patch('/documents/{document}', [SharedControlsController::class, 'classifyDocument'])->middleware('permission:records.document.classify')->name('api.documents.classify');
+    Route::post('/documents/{document}/scan-result', [SharedControlsController::class, 'scanResult'])->middleware('permission:records.document.scan_result')->name('api.documents.scan-result');
+    Route::post('/documents/{document}/hold', [SharedControlsController::class, 'setDocumentHold'])->middleware('permission:records.document.hold')->name('api.documents.hold');
+    Route::get('/documents/{document}/download', [SharedControlsController::class, 'downloadDocument'])->middleware('permission:records.document.download')->name('api.documents.download');
+    Route::get('/notifications', [SharedControlsController::class, 'notifications'])->middleware('permission:notification.notification.view')->name('api.notifications.index');
+    Route::post('/notifications/{notification}/read', [SharedControlsController::class, 'markNotificationRead'])->middleware('permission:notification.notification.view')->name('api.notifications.read');
+    Route::get('/notification-preferences', [SharedControlsController::class, 'preferences'])->middleware('permission:notification.notification.view')->name('api.notification-preferences.index');
+    Route::put('/notification-preferences', [SharedControlsController::class, 'updatePreference'])->middleware('permission:notification.preference.manage')->name('api.notification-preferences.update');
+    Route::get('/announcements', [SharedControlsController::class, 'announcements'])->middleware('permission:notification.notification.view')->name('api.announcements.index');
+    Route::post('/announcements', [SharedControlsController::class, 'createAnnouncement'])->middleware('permission:notification.announcement.create')->name('api.announcements.store');
+    Route::post('/announcements/{announcement}/publish', [SharedControlsController::class, 'publishAnnouncement'])->middleware('permission:notification.announcement.publish')->name('api.announcements.publish');
+    Route::get('/security/events', [SharedControlsController::class, 'securityEvents'])->middleware('permission:security.event.view')->name('api.security.events.index');
+    Route::get('/security/monitoring-snapshots', [SharedControlsController::class, 'monitoringSnapshots'])->middleware('permission:security.monitoring.view')->name('api.security.monitoring.index');
+    Route::post('/security/monitoring-snapshots', [SharedControlsController::class, 'recordMonitoringSnapshot'])->middleware('permission:security.monitoring.record')->name('api.security.monitoring.store');
+    Route::get('/security/incidents', [SharedControlsController::class, 'securityIncidents'])->middleware('permission:security.incident.view')->name('api.security.incidents.index');
+    Route::post('/security/incidents', [SharedControlsController::class, 'createSecurityIncident'])->middleware('permission:security.alert.triage')->name('api.security.incidents.store');
+    Route::post('/security/incidents/{incident}/transition', [SharedControlsController::class, 'transitionSecurityIncident'])->middleware('permission:security.incident.investigate')->name('api.security.incidents.transition');
+    Route::get('/user', function (Request $request) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Authenticated user retrieved.',
+            'data' => $request->user(),
+            'meta' => ['request_id' => $request->attributes->get('request_id')],
+        ]);
+    })->name('api.user');
+
+    Route::get('/system/settings', [SystemSettingsController::class, 'index'])->name('api.system.settings.index');
+    Route::post('/system/settings', [SystemSettingsController::class, 'store'])->name('api.system.settings.store');
+    Route::patch('/system/settings/{key}', [SystemSettingsController::class, 'update'])->name('api.system.settings.update');
+    Route::get('/organization/units', [OrganizationController::class, 'index'])->name('api.organization.units.index');
+    Route::get('/organization/relationships', [OrganizationController::class, 'relationships'])->name('api.organization.relationships.index');
+    Route::post('/organization/units', [OrganizationController::class, 'store'])->middleware('permission:org.unit.propose')->name('api.organization.units.store');
+    Route::post('/organization/units/{unit}/submit', [OrganizationController::class, 'submit'])->name('api.organization.units.submit');
+    Route::post('/organization/units/{unit}/activate', [OrganizationController::class, 'activate'])->name('api.organization.units.activate');
+    Route::post('/organization/relationships', [OrganizationController::class, 'relate'])->name('api.organization.relationships.store');
+    Route::post('/organization/relationships/{relationship}/submit', [OrganizationController::class, 'submitRelationship'])->name('api.organization.relationships.submit');
+    Route::post('/organization/relationships/{relationship}/activate', [OrganizationController::class, 'activateRelationship'])->name('api.organization.relationships.activate');
+    Route::get('/organization/references/{kind}', [OrganizationReferenceController::class, 'index'])->name('api.organization.references.index');
+    Route::post('/organization/references/{kind}', [OrganizationReferenceController::class, 'store'])->name('api.organization.references.store');
+    Route::post('/organization/references/{kind}/{record}/submit', [OrganizationReferenceController::class, 'submit'])->name('api.organization.references.submit');
+    Route::post('/organization/references/{kind}/{record}/activate', [OrganizationReferenceController::class, 'activate'])->name('api.organization.references.activate');
+    Route::post('/workflow-definitions', [WorkflowController::class, 'storeDefinition'])->middleware('permission:workflow.definition.create')->name('api.workflow.definitions.store');
+    Route::get('/workflow-definitions', [WorkflowController::class, 'definitions'])->middleware('permission:workflow.definition.create')->name('api.workflow.definitions.index');
+    Route::post('/workflow-definitions/{definition}/publish', [WorkflowController::class, 'publish'])->middleware('permission:workflow.definition.publish')->name('api.workflow.definitions.publish');
+    Route::get('/workflows', [WorkflowController::class, 'index'])->name('api.workflows.index');
+    Route::post('/workflows', [WorkflowController::class, 'start'])->middleware('permission:workflow.instance.assign')->name('api.workflows.start');
+    Route::post('/workflows/{instance}/decisions', [WorkflowController::class, 'decide'])->name('api.workflows.decide');
+    Route::post('/workflow-delegations', [WorkflowController::class, 'delegate'])->name('api.workflow-delegations.store');
+    Route::post('/workflows/{instance}/escalate', [WorkflowController::class, 'escalate'])->name('api.workflows.escalate');
+    Route::post('/workflows/{instance}/cancel', [WorkflowController::class, 'cancel'])->name('api.workflows.cancel');
+    Route::post('/users', [IdentityAdminController::class, 'invite'])->middleware('permission:iam.user.invite')->name('api.users.invite');
+    Route::get('/users', [IdentityAdminController::class, 'users'])->middleware('permission:iam.user.view')->name('api.users.index');
+    Route::get('/roles', [IdentityAdminController::class, 'roles'])->middleware('permission:iam.permission.manage')->name('api.roles.index');
+    Route::get('/role-assignments', [IdentityAdminController::class, 'roleAssignments'])->name('api.role-assignments.index');
+    Route::post('/users/{user}/suspend', [IdentityAdminController::class, 'suspend'])->middleware('permission:iam.user.suspend')->name('api.users.suspend');
+    Route::post('/users/{user}/reinstate', [IdentityAdminController::class, 'reinstate'])->middleware('permission:iam.user.reinstate')->name('api.users.reinstate');
+    Route::post('/users/{user}/sessions/{session}/revoke', [IdentityAdminController::class, 'revokeSession'])->middleware('permission:iam.session.revoke')->name('api.users.sessions.revoke');
+    Route::post('/roles', [IdentityAdminController::class, 'createRole'])->middleware('permission:iam.permission.manage')->name('api.roles.store');
+    Route::post('/users/{user}/roles', [IdentityAdminController::class, 'assignRole'])->name('api.users.roles.assign');
+    Route::post('/role-assignments/{assignment}/activate', [IdentityAdminController::class, 'activateRoleAssignment'])->name('api.users.roles.activate');
+    Route::get('/finance/financial-years', [FinancialCalendarController::class, 'years'])->middleware('permission:finance.financial_year.view')->name('api.finance.years.index');
+    Route::post('/finance/financial-years', [FinancialCalendarController::class, 'createYear'])->middleware('permission:finance.financial_year.create')->name('api.finance.years.store');
+    Route::get('/finance/calendars', [FinancialCalendarController::class, 'calendars'])->middleware('permission:finance.financial_year.view')->name('api.finance.calendars.index');
+    Route::post('/finance/calendars', [FinancialCalendarController::class, 'createCalendar'])->middleware('permission:finance.financial_year.create')->name('api.finance.calendars.store');
+    Route::post('/finance/financial-years/{year}/activate', [FinancialCalendarController::class, 'activateYear'])->middleware('permission:finance.financial_year.activate')->name('api.finance.years.activate');
+    Route::get('/finance/accounting-periods', [FinancialCalendarController::class, 'periods'])->middleware('permission:finance.accounting_period.view')->name('api.finance.periods.index');
+    Route::post('/finance/accounting-periods/{period}/open', [FinancialCalendarController::class, 'openPeriod'])->middleware('permission:finance.accounting_period.open')->name('api.finance.periods.open');
+    Route::post('/finance/accounting-periods/{period}/close', [FinancialCalendarController::class, 'closePeriod'])->middleware('permission:finance.accounting_period.close')->name('api.finance.periods.close');
+    Route::post('/finance/accounting-periods/{period}/reopen', [FinancialCalendarController::class, 'reopenPeriod'])->middleware('permission:finance.accounting_period.reopen')->name('api.finance.periods.reopen');
+    Route::get('/finance/currencies', [FinanceMasterDataController::class, 'currencies'])->middleware('permission:finance.coa.view')->name('api.finance.currencies.index');
+    Route::get('/finance/master-data/versions', [FinanceMasterDataController::class, 'versions'])->middleware('permission:finance.coa.view')->name('api.finance.master-data.versions');
+    Route::post('/finance/master-data/versions', [FinanceMasterDataController::class, 'createVersion'])->middleware('permission:finance.coa.edit')->name('api.finance.master-data.versions.store');
+    Route::get('/finance/master-data/versions/{version}/accounts', [FinanceMasterDataController::class, 'accounts'])->middleware('permission:finance.coa.view')->name('api.finance.accounts.index');
+    Route::post('/finance/master-data/versions/{version}/accounts', [FinanceMasterDataController::class, 'createAccount'])->middleware('permission:finance.coa.edit')->name('api.finance.accounts.store');
+    Route::post('/finance/master-data/versions/{version}/references/{kind}', [FinanceMasterDataController::class, 'createReference'])->middleware('permission:finance.coa.edit')->name('api.finance.references.store');
+    Route::post('/finance/dimension-types/{type}/dimensions', [FinanceMasterDataController::class, 'createDimension'])->middleware('permission:finance.coa.edit')->name('api.finance.dimensions.store');
+    Route::post('/finance/master-data/versions/{version}/combinations', [FinanceMasterDataController::class, 'createCombination'])->middleware('permission:finance.coa.edit')->name('api.finance.combinations.store');
+    Route::post('/finance/master-data/versions/{version}/accounting-rules', [FinanceMasterDataController::class, 'createAccountingRule'])->middleware('permission:finance.coa.edit')->name('api.finance.accounting-rules.store');
+    Route::post('/finance/master-data/versions/{version}/activate', [FinanceMasterDataController::class, 'activateVersion'])->middleware('permission:finance.master_data.activate')->name('api.finance.master-data.activate');
+    Route::post('/finance/account-combinations/validate', [FinanceMasterDataController::class, 'validateCombination'])->middleware('permission:finance.account_combination.validate')->name('api.finance.combinations.validate');
+    Route::get('/budget/calls', [BudgetLedgerController::class, 'calls'])->middleware('permission:budget_planning.submission.view')->name('api.budget.calls.index');
+    Route::post('/budget/calls', [BudgetLedgerController::class, 'createCall'])->middleware('permission:budget_planning.call.manage')->name('api.budget.calls.store');
+    Route::get('/budget/calls/{call}/ceilings', [BudgetLedgerController::class, 'ceilings'])->middleware('permission:budget_planning.submission.view')->name('api.budget.ceilings.index');
+    Route::post('/budget/calls/{call}/ceilings', [BudgetLedgerController::class, 'createCeiling'])->middleware('permission:budget_planning.ceiling.manage')->name('api.budget.ceilings.store');
+    Route::get('/budget/estimates', [BudgetLedgerController::class, 'estimates'])->middleware('permission:budget_planning.submission.view')->name('api.budget.estimates.index');
+    Route::get('/budget/versions', [BudgetLedgerController::class, 'versions'])->middleware('permission:budget_planning.submission.view')->name('api.budget.versions.index');
+    Route::post('/budget/estimates', [BudgetLedgerController::class, 'createEstimate'])->middleware('permission:budget_planning.estimate.create')->name('api.budget.estimates.store');
+    Route::post('/budget/estimates/{estimate}/submit', [BudgetLedgerController::class, 'submitEstimate'])->middleware('permission:budget_planning.submission.submit')->name('api.budget.estimates.submit');
+    Route::post('/budget/calls/{call}/consolidate', [BudgetLedgerController::class, 'consolidate'])->middleware('permission:budget_planning.version.consolidate')->name('api.budget.calls.consolidate');
+    Route::post('/budget/versions/{version}/publish', [BudgetLedgerController::class, 'publishBudget'])->middleware('permission:budget_planning.version.publish')->name('api.budget.versions.publish');
+    Route::get('/budget/allocations', [BudgetLedgerController::class, 'allocations'])->middleware('permission:budget_execution.allocation.view')->name('api.budget.allocations.index');
+    Route::post('/budget/allocations', [BudgetLedgerController::class, 'createAllocation'])->middleware('permission:budget_execution.allocation.manage')->name('api.budget.allocations.store');
+    Route::get('/budget/commitments', [BudgetLedgerController::class, 'commitments'])->middleware('permission:budget_execution.commitment.view')->name('api.budget.commitments.index');
+    Route::post('/budget/commitments', [BudgetLedgerController::class, 'createCommitment'])->middleware('permission:budget_execution.commitment.reserve')->name('api.budget.commitments.store');
+    Route::post('/budget/commitments/{commitment}/movement', [BudgetLedgerController::class, 'moveCommitment'])->middleware('permission:budget_execution.commitment.adjust')->name('api.budget.commitments.movement');
+    Route::get('/ledger/journals', [BudgetLedgerController::class, 'journals'])->middleware('permission:ledger.journal.view')->name('api.ledger.journals.index');
+    Route::post('/ledger/journals', [BudgetLedgerController::class, 'createJournal'])->middleware('permission:ledger.journal.create')->name('api.ledger.journals.store');
+    Route::post('/ledger/journals/{journal}/post', [BudgetLedgerController::class, 'postJournal'])->middleware('permission:ledger.journal.post')->name('api.ledger.journals.post');
+    Route::post('/ledger/journals/{journal}/reverse', [BudgetLedgerController::class, 'reverseJournal'])->middleware('permission:ledger.journal.reverse')->name('api.ledger.journals.reverse');
+    Route::get('/ledger/trial-balance', [BudgetLedgerController::class, 'trialBalance'])->middleware('permission:ledger.trial_balance.view')->name('api.ledger.trial-balance');
+});
+
+Route::middleware(['auth:sanctum', 'abilities:mfa-enrollment'])->group(function (): void {
+    Route::post('/auth/mfa/setup', [IdentityController::class, 'startMfa'])->middleware('throttle:login')->name('api.auth.mfa.setup');
+    Route::post('/auth/mfa/confirm', [IdentityController::class, 'confirmMfa'])->middleware('throttle:login')->name('api.auth.mfa.confirm');
+});

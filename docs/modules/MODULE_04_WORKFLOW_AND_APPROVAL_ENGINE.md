@@ -85,3 +85,5 @@ Queue aging, overdue approvals, delegation activity, rejection/return reasons, S
 
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.
+
+The implemented API includes versioned definition create/publish, a permission-filtered approval queue, decision, delegation, cancel and escalate commands. Delegations are permission- and scope-specific, effective-dated, reasoned and checked against the delegator's live permission. Escalation is an explicit queue state; no automatic SLA or escalation thresholds are enabled until configured.

@@ -80,5 +80,9 @@ Detection false positives can be closed with rationale; confirmed incidents esca
 ## Reporting and operational visibility
 Authentication failures, privileged activity, incident severity/state, audit-integrity checks, backup freshness and monitoring coverage.
 
+## Phase 2 delivery status
+
+Append-only module audit events are hash chained per module and checked by `php artisan security:verify-audit-chains`. Authentication and privileged-action telemetry, paginated event/incident APIs, version-checked incident transitions, and authenticated source-reported monitoring snapshots are implemented. IAM's pre-existing access audit table remains its owned access record; Module 26 receives a minimized telemetry copy for monitoring. Snapshots do not run automated backup or infrastructure probes. Automated detection thresholds, organization-specific incident scope, and alert integrations require operational policy/infra contracts and remain deferred. Incident closure requires resolution, a distinct reporter and transition-specific permission; every transition records a reason.
+
 ## Implementation notes
 This is a modular-monolith domain using Laravel/PHP 8.3+, React/TypeScript/Vite/Tailwind/shadcn, MySQL 8 and Redis where appropriate. Use fictional data; do not add microservices without demonstrated need.
