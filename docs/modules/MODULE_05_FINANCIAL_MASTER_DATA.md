@@ -10,11 +10,22 @@ Maintain coded hierarchical account structures, fund/source classifications and 
 Finance master-data steward maintains draft COA and dimensions. Financial controller reviews combinations and calendar setup. Authorized independent finance authority activates master-data versions and approves period open/close/reopen. Accountants consume active references; system administrators operate the platform but do not approve finance data by default; auditors have read-only change history.
 
 ## 4. Permissions and access restrictions
-- finance.coa.view/edit; finance.fund.view/edit; finance.dimension.view/edit; finance.account_combination.validate/propose/activate.
-- finance.calendar.view; finance.financial_year.create/edit/activate; finance.accounting_period.create/open/close/reopen.
-- finance.accounting_rule.propose/approve/activate; finance.master_data.export; finance.master_data.audit.view.
-Scope changes to authorized finance master-data stewards. Separate proposer from activator. Period reopen is privileged, reasoned and independently approved; no generic administrator grant implies this authority.
+| Permission | Responsible role | Approval required | Restrictions |
+|---|---|---|---|
+| `finance.coa.view` | Accountant/auditor | No | Read-only version/effective-date scope. |
+| `finance.coa.edit` | Finance master-data steward | No, draft only | No edits to active referenced versions. |
+| `finance.account_combination.validate` | Finance master-data steward | No | Validation has no activation/posting side effect. |
+| `finance.account_combination.activate` | Independent finance authority | Yes | Maker-checker; active version is immutable. |
+| `finance.financial_year.view` | Calendar steward/accountant | No | Read-only calendar and status scope. |
+| `finance.accounting_period.view` | Accountant/period controller | No | Read-only status, transition history and close evidence. |
+| `finance.financial_year.create` | Calendar steward | No, draft only | No overlapping financial years; no assumed dates. |
+| `finance.financial_year.activate` | Finance calendar approver | Yes, independent | Validate period coverage and approved calendar policy. |
+| `finance.accounting_period.open` | Period authority | Yes where policy requires | Year active and prerequisites satisfied. |
+| `finance.accounting_period.close` | Period authority | Yes, independent | Ledger readiness evidence required; this module owns status. |
+| `finance.accounting_period.reopen` | Privileged finance authority | Yes, independent | Reason/evidence and audit; no generic admin bypass. |
+| `finance.master_data.audit.view` | Auditor | No | Read-only transition/change history. |
 
+County authority defines approval limits and calendar policy. Platform administrator has no implied authority to activate or reopen periods.
 ## 5. Module-specific business rules
 Codes are unique within their configured classification and effective period. Parent-child structures cannot cycle. Account combinations must reference active accounts, funds and required dimensions; invalid combinations cannot be activated or posted. Financial year dates cannot overlap for the same calendar. Periods must belong to exactly one year, have ordered non-overlapping dates and explicit open/closed/future status. Closing a period prevents new posting; reopening is a distinct audited approval, not a status edit. Calendar changes never silently re-date posted transactions. KES is default; multi-currency usage requires an approved policy. Do not invent accounting basis, chart coding, fiscal dates or approval thresholds.
 
@@ -42,14 +53,18 @@ Own finance_accounts(id, code, name, account_type, parent_id, effective_from/to,
 FinancialMasterDataService validates versioned COA and combination graphs; CalendarService enforces year/period overlap, coverage, activation, close/reopen prerequisites; domain actions wrap activation and status changes in transactions. Form Requests validate payloads; Policies authorize finance roles; Resources return active version/status metadata; events include MasterDataVersionActivated, FinancialYearActivated, AccountingPeriodOpened, FinancialPeriodClosed and FinancialPeriodReopened. Jobs notify consumers/rebuild validation caches after commit. Period close command coordinates readiness queries with ledger (13) but module 05 owns period status.
 
 ## 10. API contracts and endpoint responsibilities
-- GET /api/v1/finance/accounts, /funds, /dimensions, /account-combinations, /financial-years, /accounting-periods: paginated, permission-specific read; filter by status/effective date/code.
-- POST/PATCH /api/v1/finance/accounts and /dimensions: finance.coa.edit / finance.dimension.edit; validate unique code, parent and effective interval; respond with draft resource/version.
-- POST /api/v1/finance/account-combinations/validate: finance.account_combination.validate; request account/fund/classification/dimension IDs; response valid/errors and rule version; no activation side effect.
-- POST /api/v1/finance/master-data-versions/{id}/activate: finance.account_combination.activate; independent approval; returns active version and effective date.
-- POST /api/v1/finance/financial-years and /{id}/activate: finance.financial_year.create/activate; validate non-overlap and complete periods.
-- POST /api/v1/finance/accounting-periods/{id}/open|close|reopen: corresponding permission; close checks ledger readiness; reopen requires reason/evidence and approval. Return 409 on stale/closed conflicts, 422 on invalid dates/rules, 403 on insufficient scope.
-Responses include stable IDs, codes, effective dates, status, version and audit correlation; never allow generic updates to active/closed state.
+| Method | Endpoint | Purpose / request and validation | Permission / approval | Response and audit |
+|---|---|---|---|---|
+| GET | `/api/v1/finance/financial-years` | List years with status/effective dates. | `finance.financial_year.view` | 200 paginated; scoped. |
+| POST | `/api/v1/finance/financial-years` | Create draft year and period calendar; validate no overlap/coverage. | `finance.financial_year.create` | 201 draft; 409 overlap; 422 invalid dates. |
+| POST | `/api/v1/finance/financial-years/{id}/activate` | Activate approved calendar version. | `finance.financial_year.activate`; independent | 200 active/versioned; audit and event. |
+| GET | `/api/v1/finance/accounting-periods` | List periods by year/status. | `finance.accounting_period.view` | 200 paginated; stable IDs. |
+| POST | `/api/v1/finance/accounting-periods/{id}/open` | Open eligible period. | `finance.accounting_period.open`; approval per policy | 200 opened; 409 invalid state. |
+| POST | `/api/v1/finance/accounting-periods/{id}/close` | Close after Module 13 readiness. | `finance.accounting_period.close`; independent approval | 200 closed; event; 409 unresolved checks. |
+| POST | `/api/v1/finance/accounting-periods/{id}/reopen` | Reopen with reason/evidence. | `finance.accounting_period.reopen`; privileged independent approval | 200 reopened; audit; 403/409/422 as applicable. |
+| POST | `/api/v1/finance/account-combinations/validate` | Validate active account/fund/dimension references. | `finance.account_combination.validate` | 200 result with rule version; no write activation. |
 
+All state changes record actor, reason, approval, version and correlation ID; closed-period state is never updated through generic PATCH.
 ## 11. Frontend responsibilities
 COA tree editor with parent/type validation; dimension and fund registers; combination validation workspace showing failed rule paths; version comparison and activation queue; financial year calendar view; period register/calendar with future/open/closed/reopened badges; close checklist from ledger reconciliation status; controlled reopen request/evidence form; change history and invalid-reference report. Only authorized finance roles see actions; backend still rechecks.
 

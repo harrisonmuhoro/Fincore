@@ -1,5 +1,8 @@
 # Module 07: Budget Execution and Control — Implementation Prompt
 
+**Architecture specification:** [../modules/MODULE_07_BUDGET_EXECUTION_AND_CONTROL.md](../modules/MODULE_07_BUDGET_EXECUTION_AND_CONTROL.md)
+
+
 Act as the implementation team for FinCore County, a modular-monolith county public financial management system using Laravel/PHP 8.3+, REST APIs, Sanctum, Laravel Policies/Gates, queues and scheduler; React/TypeScript/Vite/Tailwind/shadcn; MySQL 8 and Redis. Implement only this module's agreed scope in the existing repository.
 
 ## Module objective and boundary

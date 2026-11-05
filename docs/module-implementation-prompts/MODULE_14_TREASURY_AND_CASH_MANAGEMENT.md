@@ -1,5 +1,8 @@
 # Module 14: Treasury and Cash Management — Implementation Prompt
 
+**Architecture specification:** [../modules/MODULE_14_TREASURY_AND_CASH_MANAGEMENT.md](../modules/MODULE_14_TREASURY_AND_CASH_MANAGEMENT.md)
+
+
 Act as the implementation team for FinCore County, a modular-monolith county public financial management system using Laravel/PHP 8.3+, REST APIs, Sanctum, Laravel Policies/Gates, queues and scheduler; React/TypeScript/Vite/Tailwind/shadcn; MySQL 8 and Redis. Implement only this module's agreed scope in the existing repository.
 
 ## Module objective and boundary
